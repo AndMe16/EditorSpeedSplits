@@ -5,6 +5,7 @@ using EditorSpeedSplits;
 using HarmonyLib;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 using ZeepSDK.Level;
 using ZeepSDK.LevelEditor;
@@ -141,19 +142,30 @@ namespace EditorSpeedSplits
         [HarmonyPostfix]
         static void Postfix(LEV_SaveLoad __instance, string filePath, bool isTestLevel)
         {
-            Plugin.logger.LogInfo($"ExternalLoad called for file {filePath} isTestLevel: {isTestLevel} isInEditor: {LevelEditorApi.IsInLevelEditor}");
-
             if (!LevelEditorApi.IsInLevelEditor)
                 return;
 
             if (isTestLevel)
                 return;
 
-            Plugin.fullLevelName = filePath;
+            Plugin.fullLevelName = Path.ChangeExtension(filePath,null);
+            Plugin.logger.LogInfo($"Set fullLevelName to {Plugin.fullLevelName}");
         }
     }
 
-
+    // PATCH: LEV_SaveLoad.ExternalSaveFile
+    [HarmonyPatch(typeof(LEV_SaveLoad), "ExternalSaveFile")]
+    class LEV_SaveLoad_ExternalSaveFile_Patch
+    {
+        [HarmonyPostfix]
+        static void Postfix(LEV_SaveLoad __instance, bool isTestMap)
+        {
+            if (isTestMap)
+                return;
+            Plugin.fullLevelName = Path.Combine( __instance.GetFolderWeJustSavedInto().FullName, __instance.fileName.text);
+            Plugin.logger.LogInfo($"Set fullLevelName to {Plugin.fullLevelName}");
+        }
+    }
 
     public class ModConfig : MonoBehaviour
     {
