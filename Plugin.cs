@@ -3,9 +3,11 @@ using BepInEx.Configuration;
 using BepInEx.Logging;
 using EditorSpeedSplits;
 using HarmonyLib;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using ZeepSDK.Level;
+using ZeepSDK.LevelEditor;
 
 namespace EditorSpeedSplits
 {
@@ -16,6 +18,8 @@ namespace EditorSpeedSplits
         private Harmony harmony;
 
         public static Plugin Instance { get; private set; }
+
+        internal static string fullLevelName = "";
 
         private void Awake()
         {
@@ -32,22 +36,19 @@ namespace EditorSpeedSplits
 
         internal static void ResetSplitsForCurrentLevel()
         {
-            LevelScriptableObject  currentLevel = LevelApi.CurrentLevel;
-            if (currentLevel == null)
-            {
-                logger.LogWarning("No current level loaded.");
-                return;
-            }
-            if (!currentLevel.IsTestLevel)
-            {
-                logger.LogWarning("Current level is not a test level.");
-                return;
-            }
 
-            string currentHash = LevelApi.GetLevelHash(currentLevel);
-            ReplayManager.Instance.Replays.Remove(currentHash);
-            logger.LogInfo($"Splits reset for level {currentLevel.Path} {currentHash}.");
+            string currentFullLevelName = fullLevelName;
+
+            if (string.IsNullOrEmpty(currentFullLevelName) || (!LevelEditorApi.IsTestingLevel && !LevelEditorApi.IsInLevelEditor))
+            {
+                logger.LogWarning("No level loaded in the editor to reset splits for.");
+                return;
+            }
+            
+            ReplayManager.Instance.Replays.Remove(fullLevelName);
+            logger.LogInfo($"Splits reset for level {fullLevelName}");
         }
+
 
         private void OnDestroy()
         {
@@ -68,11 +69,16 @@ namespace EditorSpeedSplits
             if (!__instance.GlobalLevel.IsTestLevel)
                 return true;
 
-            string currentHash = LevelApi.GetLevelHash(__instance.GlobalLevel);
+            string currentFullLevelName = Plugin.fullLevelName;
 
-            ReplayManager.ReplayInfo replay = ReplayManager.Instance.GetReplay(currentHash);
+            ReplayManager.ReplayInfo replay = null;
 
-            Plugin.logger.LogInfo($"ReloadBestTimes called for level {__instance.GlobalLevel.Path} {currentHash}");
+            if (!string.IsNullOrEmpty(currentFullLevelName))
+            {
+                replay = ReplayManager.Instance.GetReplay(currentFullLevelName);
+                Plugin.logger.LogInfo($"ReloadBestTimes called for level {currentFullLevelName}");
+            }
+            
             if (replay == null)
             {
                 __instance.SetupPersonalBestAndMedals(0f, new List<WinCompare.SplitTime>());
@@ -115,15 +121,39 @@ namespace EditorSpeedSplits
             if (result.time <= 0f)
                 return;
 
-            string currentHash = LevelApi.GetLevelHash(__instance.GlobalLevel);
+            string currentFullLevelName = Plugin.fullLevelName;
+
+            if (string.IsNullOrEmpty(currentFullLevelName))
+                return;
 
             ReplayManager.Instance.AddReplay(
-                currentHash,
+                currentFullLevelName,
                 result.time,
                 result.split_times
             );
         }
     }
+
+    // PATCH: LEV_SaveLoad.ExternalLoad
+    [HarmonyPatch(typeof(LEV_SaveLoad), "ExternalLoad")]
+    class LEV_SaveLoad_ExternalLoad_Patch
+    {
+        [HarmonyPostfix]
+        static void Postfix(LEV_SaveLoad __instance, string filePath, bool isTestLevel)
+        {
+            Plugin.logger.LogInfo($"ExternalLoad called for file {filePath} isTestLevel: {isTestLevel} isInEditor: {LevelEditorApi.IsInLevelEditor}");
+
+            if (!LevelEditorApi.IsInLevelEditor)
+                return;
+
+            if (isTestLevel)
+                return;
+
+            Plugin.fullLevelName = filePath;
+        }
+    }
+
+
 
     public class ModConfig : MonoBehaviour
     {
