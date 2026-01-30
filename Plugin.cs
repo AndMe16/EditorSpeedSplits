@@ -1,8 +1,11 @@
 ﻿using BepInEx;
+using BepInEx.Configuration;
 using BepInEx.Logging;
 using EditorSpeedSplits;
 using HarmonyLib;
 using System.Collections.Generic;
+using UnityEngine;
+using ZeepSDK.Level;
 
 namespace EditorSpeedSplits
 {
@@ -22,7 +25,28 @@ namespace EditorSpeedSplits
             harmony = new Harmony("com.andme.editorspeedsplits");
             harmony.PatchAll();
 
+            ModConfig.Initialize(Config);
+
             logger.LogInfo("Plugin com.andme.editorspeedsplits is loaded!");
+        }
+
+        internal static void ResetSplitsForCurrentLevel()
+        {
+            LevelScriptableObject  currentLevel = LevelApi.CurrentLevel;
+            if (currentLevel == null)
+            {
+                logger.LogWarning("No current level loaded.");
+                return;
+            }
+            if (!currentLevel.IsTestLevel)
+            {
+                logger.LogWarning("Current level is not a test level.");
+                return;
+            }
+
+            string currentHash = LevelApi.GetLevelHash(currentLevel);
+            ReplayManager.Instance.Replays.Remove(currentHash);
+            logger.LogInfo($"Splits reset for level {currentLevel.Path} {currentHash}.");
         }
 
         private void OnDestroy()
@@ -41,12 +65,14 @@ namespace EditorSpeedSplits
         static bool Prefix(GameMaster __instance)
         {
 
-            Plugin.logger.LogInfo("ReloadBestTimes Prefix called");
             if (!__instance.GlobalLevel.IsTestLevel)
                 return true;
 
+            string currentHash = LevelApi.GetLevelHash(__instance.GlobalLevel);
 
-            ReplayManager.ReplayInfo replay = ReplayManager.Instance.GetReplay(__instance.GlobalLevel.UID);
+            ReplayManager.ReplayInfo replay = ReplayManager.Instance.GetReplay(currentHash);
+
+            Plugin.logger.LogInfo($"ReloadBestTimes called for level {__instance.GlobalLevel.Path} {currentHash}");
             if (replay == null)
             {
                 __instance.SetupPersonalBestAndMedals(0f, new List<WinCompare.SplitTime>());
@@ -89,12 +115,40 @@ namespace EditorSpeedSplits
             if (result.time <= 0f)
                 return;
 
+            string currentHash = LevelApi.GetLevelHash(__instance.GlobalLevel);
+
             ReplayManager.Instance.AddReplay(
-                __instance.GlobalLevel.UID,
+                currentHash,
                 result.time,
                 result.split_times
             );
         }
+    }
+
+    public class ModConfig : MonoBehaviour
+    {
+        public static ConfigEntry<bool> ResetSplits;
+
+
+        // Constructor that takes a ConfigFile instance from the main class
+        public static void Initialize(ConfigFile config)
+        {
+            ResetSplits = config.Bind("1. Gameplay", "1.1 Reset Splits", true,
+                "[button] Reset the current level's splits");
+
+            ResetSplits.SettingChanged += onResetSplits;
+        }
+
+        private static void onResetSplits(object sender, System.EventArgs e)
+        {
+            Plugin.ResetSplitsForCurrentLevel();
+        }
+
+        private void OnDestroy()
+        {
+            ResetSplits.SettingChanged -= onResetSplits;
+        }
+
     }
 
 
