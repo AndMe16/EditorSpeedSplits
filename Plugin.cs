@@ -7,8 +7,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
-using ZeepSDK.Level;
 using ZeepSDK.LevelEditor;
+using ZeepSDK.Messaging;
 
 namespace EditorSpeedSplits
 {
@@ -19,6 +19,8 @@ namespace EditorSpeedSplits
         private Harmony harmony;
 
         public static Plugin Instance { get; private set; }
+
+        LEV_LevelEditorCentral central;
 
         internal static string fullLevelName = "";
 
@@ -33,21 +35,49 @@ namespace EditorSpeedSplits
             ModConfig.Initialize(Config);
 
             logger.LogInfo("Plugin com.andme.editorspeedsplits is loaded!");
+
+            LevelEditorApi.EnteredLevelEditor += () =>
+            {
+                central = FindObjectOfType<LEV_LevelEditorCentral>();
+                if (central = null)
+                    logger.LogWarning("Level Editor Central not found.");
+
+            };
         }
 
         internal static void ResetSplitsForCurrentLevel()
         {
 
+            if (!LevelEditorApi.IsTestingLevel && !LevelEditorApi.IsInLevelEditor)
+                return;
+
             string currentFullLevelName = fullLevelName;
 
-            if (string.IsNullOrEmpty(currentFullLevelName) || (!LevelEditorApi.IsTestingLevel && !LevelEditorApi.IsInLevelEditor))
+            if (string.IsNullOrEmpty(currentFullLevelName))
             {
                 logger.LogWarning("No level loaded in the editor to reset splits for.");
                 return;
             }
             
             ReplayManager.Instance.Replays.Remove(fullLevelName);
+            
+            GameMaster gameMaster = FindObjectOfType<GameMaster>();
+
+            gameMaster?.SetupPersonalBestAndMedals(0f, new List<WinCompare.SplitTime>());
+
             logger.LogInfo($"Splits reset for level {fullLevelName}");
+            MessengerApi.Log("[EditorSpeedSplits] Splits Reset");
+        }
+
+        private void Update()
+        {
+
+
+            if (Input.GetKeyDown(ModConfig.ResetSplitsKey.Value))
+            {
+                ResetSplitsForCurrentLevel();
+            }
+
         }
 
 
@@ -167,9 +197,22 @@ namespace EditorSpeedSplits
         }
     }
 
+    // PATCH: LEV_ReturnToMainMenu.ReturnToMainMenu
+    [HarmonyPatch(typeof(LEV_ReturnToMainMenu), "ReturnToMainMenu")]
+    class LEV_ReturnToMainMenu_ReturnToMainMenu_Patch
+    {
+        [HarmonyPostfix]
+        static void Postfix()
+        {
+            Plugin.fullLevelName = "";
+            Plugin.logger.LogInfo("Cleared fullLevelName on return to main menu");
+        }
+    }
+
     public class ModConfig : MonoBehaviour
     {
         public static ConfigEntry<bool> ResetSplits;
+        public static ConfigEntry<KeyCode> ResetSplitsKey;
 
 
         // Constructor that takes a ConfigFile instance from the main class
@@ -177,6 +220,9 @@ namespace EditorSpeedSplits
         {
             ResetSplits = config.Bind("1. Gameplay", "1.1 Reset Splits", true,
                 "[button] Reset the current level's splits");
+
+            ResetSplitsKey = config.Bind("2. Bindings", "2.1 Reset Splits Key", KeyCode.None,
+                "Key to reset the current level's splits");
 
             ResetSplits.SettingChanged += onResetSplits;
         }
