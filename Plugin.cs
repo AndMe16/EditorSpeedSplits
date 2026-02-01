@@ -2,12 +2,15 @@
 using BepInEx.Configuration;
 using BepInEx.Logging;
 using HarmonyLib;
+using Imui.Controls;
+using Imui.Core;
 using System.IO;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using ZeepSDK.LevelEditor;
 using ZeepSDK.Messaging;
+using ZeepSDK.UI;
 
 namespace EditorSpeedSplits
 {
@@ -22,6 +25,8 @@ namespace EditorSpeedSplits
         internal static LEV_LevelEditorCentral central;
 
         internal static string fullLevelName = "";
+
+        private EditorSplitsToolbarDrawer _toolbarDrawer;
 
         private void Awake()
         {
@@ -42,6 +47,9 @@ namespace EditorSpeedSplits
                     logger.LogWarning("Level Editor Central not found.");
 
             };
+
+            _toolbarDrawer = new EditorSplitsToolbarDrawer();
+            UIApi.AddToolbarDrawer(_toolbarDrawer);
         }
 
         internal static void ResetSplitsForCurrentLevel()
@@ -104,6 +112,7 @@ namespace EditorSpeedSplits
 
         private void OnDestroy()
         {
+            UIApi.RemoveToolbarDrawer(_toolbarDrawer);
             harmony?.UnpatchSelf();
             harmony = null;
         }
@@ -227,6 +236,19 @@ namespace EditorSpeedSplits
         {
             Plugin.fullLevelName = "";
             Plugin.logger.LogInfo("Cleared fullLevelName on return to main menu");
+        }
+    }
+
+    public class EditorSplitsToolbarDrawer : IZeepToolbarDrawer
+    {
+        public string MenuTitle => "EditorSplits";
+
+        public void DrawMenuItems(ImGui gui)
+        {
+            if (gui.Menu("Reset Splits"))
+            {
+                Plugin.ResetSplitsForCurrentLevel();
+            }
         }
     }
 
