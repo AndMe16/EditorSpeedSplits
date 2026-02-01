@@ -1,12 +1,11 @@
 ﻿using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Logging;
-using EditorSpeedSplits;
 using HarmonyLib;
-using System;
-using System.Collections.Generic;
 using System.IO;
+using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using ZeepSDK.LevelEditor;
 using ZeepSDK.Messaging;
 
@@ -20,7 +19,7 @@ namespace EditorSpeedSplits
 
         public static Plugin Instance { get; private set; }
 
-        LEV_LevelEditorCentral central;
+        internal static LEV_LevelEditorCentral central;
 
         internal static string fullLevelName = "";
 
@@ -51,6 +50,12 @@ namespace EditorSpeedSplits
             if (!LevelEditorApi.IsTestingLevel && !LevelEditorApi.IsInLevelEditor)
                 return;
 
+            if (LevelEditorApi.IsInLevelEditor && central != null)
+            {
+                if (central.input.inputLocked)
+                    return;
+            }
+
             string currentFullLevelName = fullLevelName;
 
             if (string.IsNullOrEmpty(currentFullLevelName))
@@ -58,12 +63,12 @@ namespace EditorSpeedSplits
                 logger.LogWarning("No level loaded in the editor to reset splits for.");
                 return;
             }
-            
+
             ReplayManager.Instance.Replays.Remove(fullLevelName);
-            
+
             GameMaster gameMaster = FindObjectOfType<GameMaster>();
 
-            gameMaster?.SetupPersonalBestAndMedals(0f, new List<WinCompare.SplitTime>());
+            gameMaster?.SetupPersonalBestAndMedals(0f, []);
 
             logger.LogInfo($"Splits reset for level {fullLevelName}");
             MessengerApi.Log("[EditorSpeedSplits] Splits Reset");
@@ -71,15 +76,31 @@ namespace EditorSpeedSplits
 
         private void Update()
         {
+            if (!Input.GetKeyDown(ModConfig.ResetSplitsKey.Value))
+                return;
 
+            // Input globally locked / paused
+            if (Time.timeScale == 0f)
+                return;
 
-            if (Input.GetKeyDown(ModConfig.ResetSplitsKey.Value))
-            {
-                ResetSplitsForCurrentLevel();
-            }
+            // Player typing in an input field
+            if (IsTypingInInputField())
+                return;
 
+            ResetSplitsForCurrentLevel();
         }
 
+        private bool IsTypingInInputField()
+        {
+            if (EventSystem.current == null)
+                return false;
+
+            var selected = EventSystem.current.currentSelectedGameObject;
+            if (selected == null)
+                return false;
+
+            return selected.GetComponent<TMP_InputField>() != null;
+        }
 
         private void OnDestroy()
         {
@@ -112,14 +133,14 @@ namespace EditorSpeedSplits
             
             if (replay == null)
             {
-                __instance.SetupPersonalBestAndMedals(0f, new List<WinCompare.SplitTime>());
+                __instance.SetupPersonalBestAndMedals(0f, []);
                 Plugin.logger.LogInfo("No replay found, setting personal best to 0");
             }
             else
             {
                 __instance.SetupPersonalBestAndMedals(replay.Time, WinCompare.CreateSplitTimeList(replay.Splits, replay.velocities));
 
-                Plugin.logger.LogInfo($"Replay found, setting personal best to {replay.Time} {replay.Splits} {replay.velocities}");
+                Plugin.logger.LogInfo($"Replay found, setting personal best to {replay.Time}");
             }
                 
 
@@ -170,7 +191,7 @@ namespace EditorSpeedSplits
     class LEV_SaveLoad_ExternalLoad_Patch
     {
         [HarmonyPostfix]
-        static void Postfix(LEV_SaveLoad __instance, string filePath, bool isTestLevel)
+        static void Postfix(string filePath, bool isTestLevel)
         {
             if (!LevelEditorApi.IsInLevelEditor)
                 return;
@@ -224,17 +245,17 @@ namespace EditorSpeedSplits
             ResetSplitsKey = config.Bind("2. Bindings", "2.1 Reset Splits Key", KeyCode.None,
                 "Key to reset the current level's splits");
 
-            ResetSplits.SettingChanged += onResetSplits;
+            ResetSplits.SettingChanged += OnResetSplits;
         }
 
-        private static void onResetSplits(object sender, System.EventArgs e)
+        private static void OnResetSplits(object sender, System.EventArgs e)
         {
             Plugin.ResetSplitsForCurrentLevel();
         }
 
         private void OnDestroy()
         {
-            ResetSplits.SettingChanged -= onResetSplits;
+            ResetSplits.SettingChanged -= OnResetSplits;
         }
 
     }
