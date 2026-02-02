@@ -235,7 +235,7 @@ namespace EditorSpeedSplits
             layoutElement.flexibleHeight = 0f;
 
             Image bg = row.GetComponent<Image>();
-            bg.color = new Color(1f, 1f, 1f, 0.05f);
+            bg.color = new Color(1f, 1f, 1f, 0.5f);
 
             var sprite = GetRoundedButtonSprite();
             if (sprite != null)
@@ -247,6 +247,7 @@ namespace EditorSpeedSplits
             Button btn = row.GetComponent<Button>();
             btn.transition = Selectable.Transition.ColorTint;
             btn.colors = GetRowColors();
+        
 
             btn.onClick.AddListener(() => OnSplitRowClicked(cpIndex));
 
@@ -270,9 +271,27 @@ namespace EditorSpeedSplits
             hLayout.childForceExpandHeight = true;
             hLayout.childForceExpandWidth = true;
 
-            CreateSplitText(content.transform, $"CP{cpIndex}", 0.25f);
-            CreateSplitText(content.transform, FormatTime(timeSeconds), 0.45f);
-            CreateSplitText(content.transform, speed.ToString(), 0.3f);
+            CreateSplitText(
+                content.transform,
+                $"CP{cpIndex}",
+                0.25f,
+                TMPro.TextAlignmentOptions.Left
+            );
+
+            CreateSplitText(
+                content.transform,
+                FormatTime(timeSeconds),
+                0.45f,
+                TMPro.TextAlignmentOptions.Center
+            );
+
+            CreateSplitText(
+                content.transform,
+                speed.ToString(),
+                0.3f,
+                TMPro.TextAlignmentOptions.Right
+            );
+
         }
 
 
@@ -285,10 +304,10 @@ namespace EditorSpeedSplits
         {
             return new ColorBlock
             {
-                normalColor = new Color(1f, 1f, 1f, 0.05f),
-                highlightedColor = new Color(1f, 1f, 1f, 0.15f),
-                pressedColor = new Color(1f, 1f, 1f, 0.25f),
-                selectedColor = new Color(1f, 1f, 1f, 0.15f),
+                normalColor = new Color(0f, 0f, 0f, 1f),
+                highlightedColor = new Color(1f, 1f, 1f, 0.6f),
+                pressedColor = new Color(1f, 1f, 1f, 0.8f),
+                selectedColor = new Color(1f, 1f, 1f, 0.6f),
                 disabledColor = new Color(1f, 1f, 1f, 0.02f),
                 colorMultiplier = 1f,
                 fadeDuration = 0.08f
@@ -299,7 +318,8 @@ namespace EditorSpeedSplits
         private void CreateSplitText(
             Transform parent,
             string value,
-            float widthRatio)
+            float widthRatio,
+            TMPro.TextAlignmentOptions alignment)
         {
             GameObject go = new GameObject(
                 "Text",
@@ -311,17 +331,21 @@ namespace EditorSpeedSplits
 
             var text = go.GetComponent<TMPro.TextMeshProUGUI>();
             text.text = value;
-            text.alignment = TMPro.TextAlignmentOptions.Left;
+            text.alignment = alignment;
             text.color = Color.white;
             text.fontSize = 14;
+            text.enableAutoSizing = false;
 
             var font = GetEditorFont();
             if (font != null)
                 text.font = font;
 
-            var layout = go.GetComponent<LayoutElement>();
+            LayoutElement layout = go.GetComponent<LayoutElement>();
             layout.flexibleWidth = widthRatio;
+            layout.minWidth = 0;
+            layout.preferredWidth = 0;
         }
+
 
         private string FormatTime(float seconds)
         {
@@ -450,7 +474,7 @@ namespace EditorSpeedSplits
             rt.offsetMax = Vector2.zero;
 
             Image img = splitsPanel.GetComponent<Image>();
-            img.color = new Color(0f, 0f, 0f, 0.75f);
+            img.color = new Color(0f, 0f, 0f, 0.2f);
 
             var sprite = GetRoundedButtonSprite();
             if (sprite != null)
