@@ -4,6 +4,7 @@ using BepInEx.Logging;
 using HarmonyLib;
 using Imui.Controls;
 using Imui.Core;
+using System.Collections.Generic;
 using System.IO;
 using TMPro;
 using UnityEngine;
@@ -27,6 +28,7 @@ namespace EditorSpeedSplits
         internal static string fullLevelName = "";
 
         private EditorSplitsToolbarDrawer _toolbarDrawer;
+        private EditorSplitsGUIDrawer _drawer;
 
         private void Awake()
         {
@@ -47,6 +49,9 @@ namespace EditorSpeedSplits
                     logger.LogWarning("Level Editor Central not found.");
 
             };
+
+            _drawer = new EditorSplitsGUIDrawer();
+            UIApi.AddZeepGUIDrawer(_drawer);
 
             _toolbarDrawer = new EditorSplitsToolbarDrawer();
             UIApi.AddToolbarDrawer(_toolbarDrawer);
@@ -112,6 +117,7 @@ namespace EditorSpeedSplits
 
         private void OnDestroy()
         {
+            UIApi.RemoveZeepGUIDrawer(_drawer);
             UIApi.RemoveToolbarDrawer(_toolbarDrawer);
             harmony?.UnpatchSelf();
             harmony = null;
@@ -236,6 +242,86 @@ namespace EditorSpeedSplits
         {
             Plugin.fullLevelName = "";
             Plugin.logger.LogInfo("Cleared fullLevelName on return to main menu");
+        }
+    }
+
+    public class EditorSplitsGUIDrawer : IZeepGUIDrawer
+    {
+        private bool _visible = true;
+
+        private List<(float time, float speed)> _splits = new();
+
+        public void OnZeepGUI(ImGui gui)
+        {
+            if (!LevelEditorApi.IsInLevelEditor)
+                return;
+
+            if (!_visible)
+                return;
+
+
+            var rect = new ImRect(20, 800, 145, 80);
+
+            ImWindowFlag windowFlags = ImWindowFlag.NoTitleBar | ImWindowFlag.NoResizing;
+
+            if ( gui.BeginWindow("Splits", ref _visible, rect, windowFlags))
+            {
+                
+                DrawHeader(gui);
+
+                gui.EndWindow();
+            }
+        }
+
+        private void DrawHeader(ImGui gui)
+        {
+            ref bool open = ref gui.BeginScope<bool>(
+                gui.GetControlId("splits_open"),
+                false
+            );
+
+            string label = open ? "▼ Splits" : "▶ Splits";
+            if (gui.Button(label))
+            {
+                open = !open;
+            }
+
+            if (open)
+            {
+                DrawSplits(gui);
+            }
+
+            // Reset button
+            if (gui.Button("Reset"))
+            {
+                ResetSplits();
+            }
+
+            gui.Separator();
+            gui.EndScope<bool>();
+        }
+
+        private void DrawSplits(ImGui gui)
+        {
+
+            if (_splits.Count == 0)
+            {
+                gui.Text("No splits recorded.");
+                return;
+            }
+
+            for (int i = 0; i < _splits.Count; i++)
+            {
+                var split = _splits[i];
+                gui.Text($"{i + 1}. {split.time:F2}s  |  {split.speed:F1}");
+            }
+        }
+
+        private void ResetSplits()
+        {
+            _splits.Clear();
+
+            Plugin.ResetSplitsForCurrentLevel();
         }
     }
 
