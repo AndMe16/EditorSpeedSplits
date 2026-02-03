@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -191,6 +192,11 @@ namespace EditorSpeedSplits.GUIManager
             btn.transition = Selectable.Transition.ColorTint;
             btn.colors = GetRowColors();
 
+            var nav = btn.navigation;
+            nav.mode = Navigation.Mode.None;
+            btn.navigation = nav;
+
+
 
             btn.onClick.AddListener(() => OnSplitRowClicked(cpIndex));
 
@@ -277,11 +283,21 @@ namespace EditorSpeedSplits.GUIManager
             text.alignment = alignment;
             text.color = Color.white;
             text.fontSize = 14;
-            text.enableAutoSizing = false;
+            text.enableAutoSizing = true;
+            text.fontSizeMin = 1;
 
             var font = GetEditorFont();
             if (font != null)
                 text.font = font;
+
+            text.fontSharedMaterial.EnableKeyword("UNDERLAY_ON");
+            text.fontMaterial.SetFloat(ShaderUtilities.ID_UnderlayOffsetX, 0.7f);
+            text.fontMaterial.SetFloat(ShaderUtilities.ID_UnderlayOffsetY, -0.5f);
+            text.fontMaterial.SetColor(ShaderUtilities.ID_UnderlayColor, Color.black);
+
+            text.fontSharedMaterial.EnableKeyword("OUTLINE_ON");
+            text.fontMaterial.SetFloat(ShaderUtilities.ID_OutlineWidth, 0.05f);
+            text.fontMaterial.SetColor(ShaderUtilities.ID_OutlineColor, Color.black);
 
             LayoutElement layout = go.GetComponent<LayoutElement>();
             layout.flexibleWidth = widthRatio;
@@ -344,9 +360,17 @@ namespace EditorSpeedSplits.GUIManager
             if (cachedEditorFont != null)
                 return cachedEditorFont;
 
-            var tmpText = Plugin.central.GetComponentInChildren<TMPro.TextMeshProUGUI>(true);
-            if (tmpText != null)
-                cachedEditorFont = tmpText.font;
+            var font = Resources.FindObjectsOfTypeAll<TMP_FontAsset>()
+           .FirstOrDefault(f => f.name == "Code New Roman b SDF");
+
+            if (font)
+            {
+                cachedEditorFont = font;
+            }
+            else
+            {
+                Plugin.logger.LogError("Font not found in loaded resources!");
+            }
 
             return cachedEditorFont;
         }
@@ -386,7 +410,16 @@ namespace EditorSpeedSplits.GUIManager
             if (font != null)
                 text.font = font;
             text.enableAutoSizing = true;
-            text.fontSizeMin = 5;
+            text.fontSizeMin = 1;
+
+            text.fontSharedMaterial.EnableKeyword("UNDERLAY_ON");
+            text.fontMaterial.SetFloat(ShaderUtilities.ID_UnderlayOffsetX, 0.7f);
+            text.fontMaterial.SetFloat(ShaderUtilities.ID_UnderlayOffsetY, -0.5f);
+            text.fontMaterial.SetColor(ShaderUtilities.ID_UnderlayColor, Color.black);
+
+            text.fontSharedMaterial.EnableKeyword("OUTLINE_ON");
+            text.fontMaterial.SetFloat(ShaderUtilities.ID_OutlineWidth, 0.05f);
+            text.fontMaterial.SetColor(ShaderUtilities.ID_OutlineColor, Color.black);
 
             RectTransform rt = text.rectTransform;
             rt.anchorMin = Vector2.zero;
