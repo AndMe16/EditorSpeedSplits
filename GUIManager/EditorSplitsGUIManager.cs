@@ -113,8 +113,15 @@ namespace EditorSpeedSplits.GUIManager
                 new Vector2(0.55f, 0.1f),
                 new Vector2(0.95f, 0.9f),
                 new Color(0f, 0.54f, 0.82f, 1f),
-                Plugin.ResetSplitsForCurrentLevel
+                ResetSplits
             );
+        }
+
+        private void ResetSplits()
+        {
+            Plugin.ResetSplitsForCurrentLevel();
+            if (splitsVisible)
+                ToggleSplitsList();
         }
 
         private void ToggleSplitsList()
@@ -129,7 +136,7 @@ namespace EditorSpeedSplits.GUIManager
                 RefreshSplits();
         }
 
-        private void RefreshSplits()
+        internal void RefreshSplits()
         {
             if (splitsContent == null)
                 return;
@@ -137,20 +144,22 @@ namespace EditorSpeedSplits.GUIManager
             for (int i = splitsContent.childCount - 1; i >= 0; i--)
                 Destroy(splitsContent.GetChild(i).gameObject);
 
-            var dummySplits = new[]
-            {
-                (time: 6.478f, speed: 57),
-                (time: 10.547f, speed: 98),
-                (time: 14.231f, speed: 112),
-            };
+            var replay = Plugin.GetReplaySplits();
+            if (replay == null)
+                return;
+            
+            var splits = replay.Splits;
+            var speeds = replay.velocities;
 
-            for (int i = 0; i < dummySplits.Length; i++)
+            for (int i = 0; i < splits.Count; i++)
             {
+                float time = splits[i];
+                int speed = (i < speeds.Count) ? (int)speeds[i] : 0;
                 CreateSplitRow(
                     splitsContent,
                     i + 1,
-                    dummySplits[i].time,
-                    dummySplits[i].speed
+                    time,
+                    speed
                 );
             }
         }

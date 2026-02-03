@@ -29,7 +29,7 @@ namespace EditorSpeedSplits
 
         private EditorSplitsToolbarDrawer _toolbarDrawer;
 
-        private EditorSplitsGUIManager guiManager;
+        internal static EditorSplitsGUIManager guiManager;
         GameObject uiRoot;
 
         private void Awake()
@@ -50,6 +50,22 @@ namespace EditorSpeedSplits
             _toolbarDrawer = new EditorSplitsToolbarDrawer();
             UIApi.AddToolbarDrawer(_toolbarDrawer);
 
+        }
+
+        private void Update()
+        {
+            if (!Input.GetKeyDown(ModConfig.ResetSplitsKey.Value))
+                return;
+
+            // Input globally locked / paused
+            if (Time.timeScale == 0f)
+                return;
+
+            // Player typing in an input field
+            if (IsTypingInInputField())
+                return;
+
+            ResetSplitsForCurrentLevel();
         }
 
         private void OnEnteredLevelEditor()
@@ -92,6 +108,7 @@ namespace EditorSpeedSplits
             if (string.IsNullOrEmpty(currentFullLevelName))
             {
                 logger.LogWarning("No level loaded in the editor to reset splits for.");
+                MessengerApi.LogWarning("[EditorSpeedSplits] No level loaded to reset splits for");
                 return;
             }
 
@@ -101,24 +118,10 @@ namespace EditorSpeedSplits
 
             gameMaster?.SetupPersonalBestAndMedals(0f, []);
 
+            guiManager?.RefreshSplits();
+
             logger.LogInfo($"Splits reset for level {fullLevelName}");
             MessengerApi.Log("[EditorSpeedSplits] Splits Reset");
-        }
-
-        private void Update()
-        {
-            if (!Input.GetKeyDown(ModConfig.ResetSplitsKey.Value))
-                return;
-
-            // Input globally locked / paused
-            if (Time.timeScale == 0f)
-                return;
-
-            // Player typing in an input field
-            if (IsTypingInInputField())
-                return;
-
-            ResetSplitsForCurrentLevel();
         }
 
         private bool IsTypingInInputField()
@@ -143,6 +146,18 @@ namespace EditorSpeedSplits
             guiManager.Initialize();
         }
 
+        internal static ReplayManager.ReplayInfo GetReplaySplits()
+        {
+            ReplayManager.ReplayInfo replay = null;
+
+            if (!string.IsNullOrEmpty(fullLevelName))
+            {
+                replay = ReplayManager.Instance.GetReplay(fullLevelName);
+            }
+
+            return replay;
+        }
+
         private void OnDestroy()
         {
             UIApi.RemoveToolbarDrawer(_toolbarDrawer);
@@ -165,16 +180,8 @@ namespace EditorSpeedSplits
             if (!__instance.GlobalLevel.IsTestLevel)
                 return true;
 
-            string currentFullLevelName = Plugin.fullLevelName;
+            ReplayManager.ReplayInfo replay = Plugin.GetReplaySplits();
 
-            ReplayManager.ReplayInfo replay = null;
-
-            if (!string.IsNullOrEmpty(currentFullLevelName))
-            {
-                replay = ReplayManager.Instance.GetReplay(currentFullLevelName);
-                Plugin.logger.LogInfo($"ReloadBestTimes called for level {currentFullLevelName}");
-            }
-            
             if (replay == null)
             {
                 __instance.SetupPersonalBestAndMedals(0f, []);
@@ -186,7 +193,7 @@ namespace EditorSpeedSplits
 
                 Plugin.logger.LogInfo($"Replay found, setting personal best to {replay.Time}");
             }
-                
+
 
             return false;
         }
@@ -245,6 +252,8 @@ namespace EditorSpeedSplits
 
             Plugin.fullLevelName = Path.ChangeExtension(filePath,null);
             Plugin.logger.LogInfo($"Set fullLevelName to {Plugin.fullLevelName}");
+
+            Plugin.guiManager?.RefreshSplits();
         }
     }
 
