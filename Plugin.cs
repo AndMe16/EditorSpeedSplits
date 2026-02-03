@@ -1,17 +1,21 @@
 ﻿using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Logging;
+using EditorSpeedSplits.GUIManager;
 using HarmonyLib;
 using Imui.Controls;
 using Imui.Core;
+using System;
+using System.Collections.Generic;
 using System.IO;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using ZeepSDK.LevelEditor;
 using ZeepSDK.Messaging;
+using ZeepSDK.Racing;
+using ZeepSDK.Storage;
 using ZeepSDK.UI;
-using EditorSpeedSplits.GUIManager;
 
 namespace EditorSpeedSplits
 {
@@ -27,10 +31,14 @@ namespace EditorSpeedSplits
 
         internal static string fullLevelName = "";
 
+        internal static readonly string defaultName = "LevelEditorSplitsModDefaultName";
+
         private EditorSplitsToolbarDrawer _toolbarDrawer;
 
         internal static EditorSplitsGUIManager guiManager;
         GameObject uiRoot;
+
+        internal IModStorage personalBestSplitsStorage;
 
         private void Awake()
         {
@@ -46,9 +54,12 @@ namespace EditorSpeedSplits
 
             LevelEditorApi.EnteredLevelEditor += OnEnteredLevelEditor;
             LevelEditorApi.ExitedLevelEditor += OnExitedLevelEditor;
+            RacingApi.PlayerSpawned += OnPlayerSpawned;
 
             _toolbarDrawer = new EditorSplitsToolbarDrawer();
             UIApi.AddToolbarDrawer(_toolbarDrawer);
+
+            personalBestSplitsStorage = StorageApi.CreateModStorage(this);
 
         }
 
@@ -76,7 +87,24 @@ namespace EditorSpeedSplits
                 logger.LogWarning("Level Editor Central not found.");
                 return;
             }
+
+            if (string.IsNullOrEmpty(fullLevelName))
+            {
+                fullLevelName = defaultName;
+                ReplayManager.Instance.Replays.Remove(fullLevelName);
+                SplitRecorder.DeleteBestSplits(fullLevelName);
+
+            }
+
             SetupEditorUI();
+        }
+
+        private void OnPlayerSpawned()
+        {
+            if (!LevelEditorApi.IsTestingLevel)
+                return;
+
+            SplitRecorder.Clear();
         }
 
         private void OnExitedLevelEditor()
@@ -117,6 +145,8 @@ namespace EditorSpeedSplits
             GameMaster gameMaster = FindObjectOfType<GameMaster>();
 
             gameMaster?.SetupPersonalBestAndMedals(0f, []);
+
+            SplitRecorder.DeleteBestSplits(fullLevelName);
 
             guiManager?.RefreshSplits();
 
@@ -163,6 +193,7 @@ namespace EditorSpeedSplits
             UIApi.RemoveToolbarDrawer(_toolbarDrawer);
             LevelEditorApi.EnteredLevelEditor -= OnEnteredLevelEditor;
             LevelEditorApi.ExitedLevelEditor -= OnExitedLevelEditor;
+            RacingApi.PlayerSpawned -= OnPlayerSpawned;
             harmony?.UnpatchSelf();
             harmony = null;
         }
@@ -229,6 +260,15 @@ namespace EditorSpeedSplits
             if (string.IsNullOrEmpty(currentFullLevelName))
                 return;
 
+            if (ReplayManager.Instance.Replays.TryGetValue(currentFullLevelName, out ReplayManager.ReplayInfo replayInfo))
+            {
+                if (result.time > replayInfo.Time)
+                {
+                    return;
+                }
+            }
+            SplitRecorder.SaveBestSplits(currentFullLevelName, result.time);
+
             ReplayManager.Instance.AddReplay(
                 currentFullLevelName,
                 result.time,
@@ -251,7 +291,6 @@ namespace EditorSpeedSplits
                 return;
 
             Plugin.fullLevelName = Path.ChangeExtension(filePath,null);
-            Plugin.logger.LogInfo($"Set fullLevelName to {Plugin.fullLevelName}");
 
             Plugin.guiManager?.RefreshSplits();
         }
@@ -266,8 +305,18 @@ namespace EditorSpeedSplits
         {
             if (isTestMap)
                 return;
+
+            string newFullLevelName = Path.Combine(__instance.GetFolderWeJustSavedInto().FullName, __instance.fileName.text);
+
+            var currentReplay = Plugin.GetReplaySplits();
+
+            if (currentReplay != null)
+            {
+                ReplayManager.Instance.AddReplay(newFullLevelName, currentReplay.Time, WinCompare.CreateSplitTimeList(currentReplay?.Splits, currentReplay?.velocities));
+                SplitRecorder.SaveBestSplits(newFullLevelName, currentReplay.Time);
+            }
+
             Plugin.fullLevelName = Path.Combine( __instance.GetFolderWeJustSavedInto().FullName, __instance.fileName.text);
-            Plugin.logger.LogInfo($"Set fullLevelName to {Plugin.fullLevelName}");
         }
     }
 
@@ -280,6 +329,42 @@ namespace EditorSpeedSplits
         {
             Plugin.fullLevelName = "";
             Plugin.logger.LogInfo("Cleared fullLevelName on return to main menu");
+        }
+    }
+
+    // PATCH: ReadyToReset.HeyYouHitATrigger
+    [HarmonyPatch(typeof(ReadyToReset), "HeyYouHitATrigger")]
+    class ReadyToReset_HeyYouHitATrigger_Patch
+    {
+        [HarmonyPostfix]
+        static void Postfix(
+            ReadyToReset __instance,
+            bool isFinish, 
+            Vector3 planePosition, 
+            Vector3 planeOrientation
+            )
+        {
+            if (!LevelEditorApi.IsTestingLevel)
+                return;
+
+            // Get recorded time from player results
+            float timeOffset = __instance.master.playerResults[__instance.index].split_times[^1].time;
+            float velocity = __instance.master.playerResults[__instance.index].split_times[^1].velocity;
+
+            EditorSplit split = new EditorSplit
+            {
+                time = timeOffset,
+                velocity = velocity,
+
+                planePosition = planePosition,
+                planeOrientation = planeOrientation,
+            };
+
+            if (!isFinish)
+            {
+                SplitRecorder.Add(split);
+                Plugin.logger.LogInfo($"Recorded split {split.index} at time {split.time} with velocity {split.velocity} km/h");
+            }
         }
     }
 
@@ -327,6 +412,83 @@ namespace EditorSpeedSplits
 
     }
 
+    internal class EditorSplit
+    {   
+        public int index;
+
+        public float time;
+        public float velocity;
+
+        public Vector3 planePosition;
+        public Vector3 planeOrientation;
+    }
+
+    internal class  LevelSplits
+    {
+        public string levelName;
+
+        public float totalTime;
+
+        public List<EditorSplit> splits;
+    }
+
+    internal static class SplitRecorder
+    {
+        public static readonly List<EditorSplit> Splits = new();
+
+        public static void Clear()
+        {
+            Splits.Clear();
+        }
+
+        public static void Add(EditorSplit split)
+        {
+            split.index = Splits.Count + 1;
+            Splits.Add(split);
+        }
+
+        public static void SaveBestSplits(string levelName, float bestTime)
+        {
+            LevelSplits levelSplits = new LevelSplits
+            {
+                levelName = levelName,
+                totalTime = bestTime,
+                splits = new List<EditorSplit>(Splits)
+            };
+
+            // FileName
+            // Transform path to identifier
+            string identifier = levelName.Replace(Path.DirectorySeparatorChar, '_').Replace(Path.AltDirectorySeparatorChar, '_');
+
+            Plugin.Instance.personalBestSplitsStorage.SaveToJson(identifier, levelSplits);
+
+            Plugin.logger.LogInfo($"Saved best splits for level {levelName} to storage.");
+        }
+
+        public static LevelSplits LoadBestSplits(string levelName)
+        {
+            // Transform path to identifier
+            string identifier = levelName.Replace(Path.DirectorySeparatorChar, '_').Replace(Path.AltDirectorySeparatorChar, '_');
+
+            if (!Plugin.Instance.personalBestSplitsStorage.JsonFileExists(identifier))
+                return null;
+            
+            Plugin.logger.LogInfo($"Loading best splits for level {levelName} from storage.");
+
+            return Plugin.Instance.personalBestSplitsStorage.LoadFromJson<LevelSplits>(identifier);
+        }
+
+        public static void DeleteBestSplits(string levelName)
+        {
+            // Transform path to identifier
+            string identifier = levelName.Replace(Path.DirectorySeparatorChar, '_').Replace(Path.AltDirectorySeparatorChar, '_');
+            if (Plugin.Instance.personalBestSplitsStorage.JsonFileExists(identifier))
+            {
+                Plugin.Instance.personalBestSplitsStorage.DeleteJsonFile(identifier);
+                Plugin.logger.LogInfo($"Deleted best splits for level {levelName} from storage.");
+            }
+        }
+    }
 
 
 }

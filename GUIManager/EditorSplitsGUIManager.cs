@@ -3,6 +3,8 @@ using System.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using ZeepSDK.UI;
+using static Rewired.ComponentControls.Effects.RotateAroundAxis;
 namespace EditorSpeedSplits.GUIManager
 {
     internal class EditorSplitsGUIManager : MonoBehaviour
@@ -62,6 +64,8 @@ namespace EditorSpeedSplits.GUIManager
                 rt.pivot = new Vector2(0.5f, 0.5f);
                 rt.offsetMin = new Vector2(0, 0);
                 rt.offsetMax = new Vector2(0, 0);
+
+                UIApi.AddToConfigurator(rt);
             }
 
 
@@ -144,22 +148,24 @@ namespace EditorSpeedSplits.GUIManager
             for (int i = splitsContent.childCount - 1; i >= 0; i--)
                 Destroy(splitsContent.GetChild(i).gameObject);
 
-            var replay = Plugin.GetReplaySplits();
+            string levelName = Plugin.fullLevelName;
+
+            if (string.IsNullOrEmpty(levelName))
+                return;
+
+            var replay = SplitRecorder.LoadBestSplits(levelName);
             if (replay == null)
                 return;
-            
-            var splits = replay.Splits;
-            var speeds = replay.velocities;
 
-            for (int i = 0; i < splits.Count; i++)
+            var splits = replay.splits;
+
+            foreach (var split in splits)
             {
-                float time = splits[i];
-                int speed = (i < speeds.Count) ? (int)speeds[i] : 0;
                 CreateSplitRow(
                     splitsContent,
-                    i + 1,
-                    time,
-                    speed
+                    split.index,
+                    split.time,
+                    split.velocity
                 );
             }
         }
@@ -169,7 +175,7 @@ namespace EditorSpeedSplits.GUIManager
             Transform parent,
             int cpIndex,
             float timeSeconds,
-            int speed)
+            float speed)
         {
             GameObject row = new GameObject(
                 $"SplitRow_CP{cpIndex}",
@@ -245,11 +251,10 @@ namespace EditorSpeedSplits.GUIManager
 
             CreateSplitText(
                 content.transform,
-                speed.ToString(),
+                speed.ToString("N2"),
                 0.3f,
                 TMPro.TextAlignmentOptions.Right
             );
-
         }
 
 
@@ -465,29 +470,86 @@ namespace EditorSpeedSplits.GUIManager
             if (sprite != null)
                 img.sprite = sprite;
 
-            // --- Content root ---
+            // --- Scroll View ---
+            GameObject scrollView = new GameObject(
+                "ScrollView",
+                typeof(RectTransform),
+                typeof(ScrollRect)
+            );
+            scrollView.transform.SetParent(splitsPanel.transform, false);
+
+            RectTransform scrollRT = scrollView.GetComponent<RectTransform>();
+            scrollRT.anchorMin = Vector2.zero;
+            scrollRT.anchorMax = Vector2.one;
+            scrollRT.offsetMin = new Vector2(10, 10);
+            scrollRT.offsetMax = new Vector2(-10, -10);
+
+            ScrollRect scrollRect = scrollView.GetComponent<ScrollRect>();
+            scrollRect.horizontal = false;
+            scrollRect.movementType = ScrollRect.MovementType.Clamped;
+            scrollRect.scrollSensitivity = 20f;
+
+            // Viewport
+            GameObject viewport = new GameObject(
+                "Viewport",
+                typeof(RectTransform),
+                typeof(RectMask2D),
+                typeof(Image)
+            );
+            viewport.transform.SetParent(scrollView.transform, false);
+
+            RectTransform viewportRT = viewport.GetComponent<RectTransform>();
+            viewportRT.anchorMin = Vector2.zero;
+            viewportRT.anchorMax = Vector2.one;
+            viewportRT.offsetMin = Vector2.zero;
+            viewportRT.offsetMax = Vector2.zero;
+
+            Image vpImg = viewport.GetComponent<Image>();
+            vpImg.color = new Color(1, 1, 1, 0.01f);
+
+            scrollRect.viewport = viewportRT;
+
+            // Content
             GameObject content = new GameObject(
                 "Content",
                 typeof(RectTransform),
-                typeof(VerticalLayoutGroup)
+                typeof(VerticalLayoutGroup),
+                typeof(ContentSizeFitter)
             );
-            content.transform.SetParent(splitsPanel.transform, false);
+            content.transform.SetParent(viewport.transform, false);
 
             RectTransform contentRT = content.GetComponent<RectTransform>();
-            contentRT.anchorMin = Vector2.zero;
-            contentRT.anchorMax = Vector2.one;
-            contentRT.offsetMin = new Vector2(10, 10);
-            contentRT.offsetMax = new Vector2(-10, -10);
+            contentRT.anchorMin = new Vector2(0, 1);
+            contentRT.anchorMax = new Vector2(1, 1);
+            contentRT.pivot = new Vector2(0.5f, 1f);
+            contentRT.offsetMin = Vector2.zero;
+            contentRT.offsetMax = Vector2.zero;
+            contentRT.anchoredPosition = Vector2.zero;
 
-            var layout = content.GetComponent<VerticalLayoutGroup>();
+            VerticalLayoutGroup layout = content.GetComponent<VerticalLayoutGroup>();
             layout.spacing = 6;
             layout.childForceExpandHeight = false;
             layout.childControlHeight = true;
+            layout.childForceExpandWidth = true;
 
+            ContentSizeFitter fitter = content.GetComponent<ContentSizeFitter>();
+            fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+            scrollRect.content = contentRT;
 
             splitsContent = content.transform;
 
+
             splitsPanel.SetActive(false);
+        }
+
+        private void OnDestroy()
+        {
+            if (buttonsPanel != null)
+                Destroy(buttonsPanel);
+            if (splitsPanel != null)
+                Destroy(splitsPanel);
+
         }
     }
 }
