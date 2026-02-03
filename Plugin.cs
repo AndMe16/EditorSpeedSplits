@@ -8,6 +8,8 @@ using Imui.Core;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Security.Cryptography;
+using System.Text;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -20,6 +22,7 @@ using ZeepSDK.UI;
 namespace EditorSpeedSplits
 {
     [BepInPlugin("com.andme.editorspeedsplits", "EditorSpeedSplits", MyPluginInfo.PLUGIN_VERSION)]
+    [BepInDependency("ZeepSDK")]
     public class Plugin : BaseUnityPlugin
     {
         internal static ManualLogSource logger;
@@ -188,6 +191,34 @@ namespace EditorSpeedSplits
             return replay;
         }
 
+        internal static string MakeLevelIdentifier(string levelPath)
+        {
+            // Nombre corto y legible
+            string shortName = Path.GetFileNameWithoutExtension(levelPath);
+
+            // Hash estable del path completo
+            string hash = ComputeHash(levelPath);
+
+            return $"{shortName}_{hash}";
+        }
+
+
+        private static string ComputeHash(string input)
+        {
+            using (var sha1 = SHA1.Create())
+            {
+                byte[] bytes = Encoding.UTF8.GetBytes(input);
+                byte[] hashBytes = sha1.ComputeHash(bytes);
+
+                // 8 chars es suficiente y corto
+                return BitConverter.ToString(hashBytes)
+                    .Replace("-", "")
+                    .Substring(0, 8)
+                    .ToLowerInvariant();
+            }
+        }
+
+
         private void OnDestroy()
         {
             UIApi.RemoveToolbarDrawer(_toolbarDrawer);
@@ -290,7 +321,7 @@ namespace EditorSpeedSplits
             if (isTestLevel)
                 return;
 
-            Plugin.fullLevelName = Path.ChangeExtension(filePath,null);
+            Plugin.fullLevelName = Plugin.MakeLevelIdentifier(Path.ChangeExtension(filePath,null));
 
             Plugin.guiManager?.RefreshSplits();
         }
@@ -306,7 +337,7 @@ namespace EditorSpeedSplits
             if (isTestMap)
                 return;
 
-            string newFullLevelName = Path.Combine(__instance.GetFolderWeJustSavedInto().FullName, __instance.fileName.text);
+            string newFullLevelName = Plugin.MakeLevelIdentifier(Path.Combine(__instance.GetFolderWeJustSavedInto().FullName, __instance.fileName.text));
 
             var currentReplay = Plugin.GetReplaySplits();
 
@@ -316,7 +347,7 @@ namespace EditorSpeedSplits
                 SplitRecorder.SaveBestSplits(newFullLevelName, currentReplay.Time);
             }
 
-            Plugin.fullLevelName = Path.Combine( __instance.GetFolderWeJustSavedInto().FullName, __instance.fileName.text);
+            Plugin.fullLevelName = newFullLevelName;
         }
     }
 
