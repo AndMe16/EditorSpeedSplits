@@ -1,10 +1,11 @@
-﻿using System;
+﻿using EditorSpeedSplits.Splits;
+using System;
 using System.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using ZeepSDK.UI;
-using static Rewired.ComponentControls.Effects.RotateAroundAxis;
+
 namespace EditorSpeedSplits.GUIManager
 {
     internal class EditorSplitsGUIManager : MonoBehaviour
