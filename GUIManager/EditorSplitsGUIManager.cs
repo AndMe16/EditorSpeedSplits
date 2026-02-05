@@ -85,6 +85,7 @@ namespace EditorSpeedSplits.GUIManager
                 typeof(Image)
             );
             buttonsPanel.transform.SetParent(modRoot, false);
+            AddInputBlocker(buttonsPanel);
 
             RectTransform panelRT = buttonsPanel.GetComponent<RectTransform>();
             panelRT.anchorMin = new Vector2(0.30f, 0.88f);
@@ -187,6 +188,7 @@ namespace EditorSpeedSplits.GUIManager
                 typeof(LayoutElement)
             );
             row.transform.SetParent(parent, false);
+            AddInputBlocker(row);
 
             // --- Layout control ---
             LayoutElement layoutElement = row.GetComponent<LayoutElement>();
@@ -345,6 +347,7 @@ namespace EditorSpeedSplits.GUIManager
                 typeof(Button)
             );
             go.transform.SetParent(parent, false);
+            AddInputBlocker(go);
 
             RectTransform rt = go.GetComponent<RectTransform>();
             rt.anchorMin = anchorMin;
@@ -457,6 +460,7 @@ namespace EditorSpeedSplits.GUIManager
                 typeof(Image)
             );
             splitsPanel.transform.SetParent(modRoot, false);
+            AddInputBlocker(splitsPanel);
 
             RectTransform rt = splitsPanel.GetComponent<RectTransform>();
             rt.anchorMin = new Vector2(0.05f, 0.05f);
@@ -498,6 +502,7 @@ namespace EditorSpeedSplits.GUIManager
                 typeof(Image)
             );
             viewport.transform.SetParent(scrollView.transform, false);
+            AddInputBlocker(viewport);
 
             RectTransform viewportRT = viewport.GetComponent<RectTransform>();
             viewportRT.anchorMin = Vector2.zero;
@@ -551,6 +556,12 @@ namespace EditorSpeedSplits.GUIManager
             if (splitsPanel != null)
                 Destroy(splitsPanel);
 
+        }
+
+        private void AddInputBlocker(GameObject target)
+        {
+            if (target.GetComponent<EditorSplitsUIInputBlocker>() == null)
+                target.AddComponent<EditorSplitsUIInputBlocker>();
         }
     }
 }
