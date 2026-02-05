@@ -188,7 +188,6 @@ namespace EditorSpeedSplits.GUIManager
                 typeof(LayoutElement)
             );
             row.transform.SetParent(parent, false);
-            AddInputBlocker(row);
 
             // --- Layout control ---
             LayoutElement layoutElement = row.GetComponent<LayoutElement>();
@@ -347,7 +346,6 @@ namespace EditorSpeedSplits.GUIManager
                 typeof(Button)
             );
             go.transform.SetParent(parent, false);
-            AddInputBlocker(go);
 
             RectTransform rt = go.GetComponent<RectTransform>();
             rt.anchorMin = anchorMin;
@@ -502,7 +500,6 @@ namespace EditorSpeedSplits.GUIManager
                 typeof(Image)
             );
             viewport.transform.SetParent(scrollView.transform, false);
-            AddInputBlocker(viewport);
 
             RectTransform viewportRT = viewport.GetComponent<RectTransform>();
             viewportRT.anchorMin = Vector2.zero;
