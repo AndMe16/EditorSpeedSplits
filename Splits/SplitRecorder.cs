@@ -14,7 +14,6 @@ namespace EditorSpeedSplits.Splits
 
         public static void Add(EditorSplit split)
         {
-            split.index = Splits.Count + 1;
             Splits.Add(split);
         }
 

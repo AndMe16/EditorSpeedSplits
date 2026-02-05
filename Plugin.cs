@@ -2,6 +2,7 @@
 using BepInEx.Logging;
 using EditorSpeedSplits.Configuration;
 using EditorSpeedSplits.GUIManager;
+using EditorSpeedSplits.Patches;
 using EditorSpeedSplits.Splits;
 using EditorSpeedSplits.UI;
 using HarmonyLib;
@@ -103,6 +104,7 @@ namespace EditorSpeedSplits
                 return;
 
             SplitRecorder.Clear();
+            ReadyToResetHeyYouHitATriggerPatch.triggers.Clear();
         }
 
         private void OnExitedLevelEditor()

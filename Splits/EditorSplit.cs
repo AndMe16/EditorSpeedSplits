@@ -6,6 +6,8 @@ namespace EditorSpeedSplits.Splits
     {
         public int index;
 
+        public bool isFinish;
+
         public float time;
         public float velocity;
 

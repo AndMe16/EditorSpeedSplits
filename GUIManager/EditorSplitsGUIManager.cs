@@ -177,7 +177,8 @@ namespace EditorSpeedSplits.GUIManager
             Transform parent,
             int cpIndex,
             float timeSeconds,
-            float speed)
+            float speed
+            )
         {
             GameObject row = new GameObject(
                 $"SplitRow_CP{cpIndex}",
@@ -213,8 +214,6 @@ namespace EditorSpeedSplits.GUIManager
             nav.mode = Navigation.Mode.None;
             btn.navigation = nav;
 
-
-
             btn.onClick.AddListener(() => OnSplitRowClicked(cpIndex));
 
             // --- Content ---
@@ -239,7 +238,7 @@ namespace EditorSpeedSplits.GUIManager
 
             CreateSplitText(
                 content.transform,
-                $"CP{cpIndex}",
+                cpIndex!=0? $"CP{cpIndex}" : "FIN",
                 0.25f,
                 TMPro.TextAlignmentOptions.Left
             );
