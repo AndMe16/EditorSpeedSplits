@@ -31,7 +31,10 @@ namespace EditorSpeedSplits.Patches
                     WinCompare.CreateSplitTimeList(
                         currentReplay?.Splits,
                         currentReplay?.velocities));
-                SplitRecorder.SaveBestSplits(newFullLevelName, currentReplay.Time);
+
+                var bestSplits = SplitRecorder.LoadBestSplits(Plugin.fullLevelName);
+
+                SplitRecorder.SaveBestSplits(newFullLevelName, bestSplits.totalTime, bestSplits.splits);
             }
 
             Plugin.fullLevelName = newFullLevelName;

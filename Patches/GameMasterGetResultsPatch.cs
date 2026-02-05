@@ -40,7 +40,7 @@ namespace EditorSpeedSplits.Patches
                     return;
             }
 
-            SplitRecorder.SaveBestSplits(currentFullLevelName, result.time);
+            SplitRecorder.SaveBestSplits(currentFullLevelName, result.time, SplitRecorder.Splits);
 
             ReplayManager.Instance.AddReplay(
                 currentFullLevelName,

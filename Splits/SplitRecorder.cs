@@ -17,13 +17,13 @@ namespace EditorSpeedSplits.Splits
             Splits.Add(split);
         }
 
-        public static void SaveBestSplits(string levelName, float bestTime)
+        public static void SaveBestSplits(string levelName, float bestTime, List<EditorSplit> bestSplits)
         {
             LevelSplits levelSplits = new LevelSplits
             {
                 levelName = levelName,
                 totalTime = bestTime,
-                splits = new List<EditorSplit>(Splits)
+                splits = new List<EditorSplit>(bestSplits)
             };
 
             string identifier = levelName.Replace(Path.DirectorySeparatorChar, '_')
