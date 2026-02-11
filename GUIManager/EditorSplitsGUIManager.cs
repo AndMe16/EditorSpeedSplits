@@ -260,16 +260,14 @@ namespace EditorSpeedSplits.GUIManager
             if (split == null)
                 return;
 
-            if (!TryMoveEditorCamera(split.planePosition, split.planeOrientation))
+            if (!TryMoveEditorCamera(split.planePosition, split.planeOrientation, split.bounds, split.zeepkistOrientation))
             {
                 Plugin.logger.LogWarning($"Could not move editor camera for split {split.index}.");
                 return;
             }
-
-            Plugin.logger.LogInfo($"Moved editor camera to split {split.index} at {split.planePosition} / {split.planeOrientation}");
         }
 
-        private bool TryMoveEditorCamera(Vector3 planePosition, Vector3 planeOrientation)
+        private bool TryMoveEditorCamera(Vector3 planePosition, Vector3 planeOrientation, Bounds bounds, Vector3 zeepkistOrientation)
         {
             if (Plugin.central?.cam == null)
                 return false;
@@ -278,17 +276,34 @@ namespace EditorSpeedSplits.GUIManager
             if (moveCamera.cameraTransform == null)
                 return false;
 
-            const float cameraBackOffset = 20f;
-            const float cameraHeightOffset = 1f;
+            Vector3 size;
+            if (bounds == null)
+                size = Vector3.one * 1f;
+            else
+                size = bounds.size;
 
+            // ---- Dynamic Offsets ----
+            float cameraBackOffset = Mathf.Min(Mathf.Max(size.x, size.z) * 1.2f, 50);
+            float cameraHeightOffset = Mathf.Min(size.y * 1f, 10);
 
-            Vector3 projectedOrientation = Vector3.ProjectOnPlane(planeOrientation, Vector3.up).normalized;
+            Vector3 planeDir = Vector3.ProjectOnPlane(planeOrientation, Vector3.up).normalized;
 
-            if (projectedOrientation.sqrMagnitude < 0.001f)
+            Vector3 carDir;
+            if (zeepkistOrientation == null)
+                carDir = planeDir;
+            else
+                carDir = Vector3.ProjectOnPlane(zeepkistOrientation, Vector3.up).normalized;
+
+            if (planeDir.sqrMagnitude < 0.001f)
+                planeDir = Vector3.forward;
+
+            if (carDir.sqrMagnitude > 0.001f && Vector3.Dot(planeDir, carDir) < 0f)
             {
-                // If the projected orientation is too small, use a default forward direction.
-                projectedOrientation = Vector3.forward;
+                planeDir = -planeDir;
             }
+
+            Vector3 projectedOrientation = planeDir;
+
 
             // Move camera to the plane position
             moveCamera.transform.position = planePosition + Vector3.up * cameraHeightOffset - projectedOrientation * cameraBackOffset;

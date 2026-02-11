@@ -18,7 +18,11 @@ namespace EditorSpeedSplits.Patches
             ref bool isFinish,
             ref Vector3 planePosition,
             ref Vector3 planeOrientation,
-            ref float velocityKMH)
+            ref float velocityKMH,
+            ref Vector3 zeepkistPosition,
+            ref Vector3 zeepkistOrientation,
+            ref Vector3 pointOnPlane
+            )
         {
             if (!LevelEditorApi.IsTestingLevel)
                 return;
@@ -53,6 +57,14 @@ namespace EditorSpeedSplits.Patches
 
             triggers.Add(theTrigger);
 
+            Bounds bounds;
+
+            Collider col = theTrigger.GetComponent<Collider>();
+            if (col == null)
+                bounds = new Bounds(theTrigger.transform.position, Vector3.zero);
+            else
+                bounds = col.bounds;
+
             EditorSplit split = new()
             {
                 index = isFinish?0:__instance.master.playerResults[__instance.index].split_times.Count,
@@ -64,6 +76,14 @@ namespace EditorSpeedSplits.Patches
 
                 planePosition = planePosition,
                 planeOrientation = planeOrientation,
+
+                zeepkistPosition = zeepkistPosition,
+                zeepkistOrientation = zeepkistOrientation,
+
+                pointOnPlane = pointOnPlane,
+
+                bounds = bounds
+
             };
 
             SplitRecorder.Add(split);

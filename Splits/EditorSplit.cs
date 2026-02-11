@@ -13,5 +13,11 @@ namespace EditorSpeedSplits.Splits
 
         public Vector3 planePosition;
         public Vector3 planeOrientation;
+
+        public Vector3 zeepkistPosition;
+        public Vector3 zeepkistOrientation;
+        public Vector3 pointOnPlane;
+
+        public Bounds bounds;
     }
 }
