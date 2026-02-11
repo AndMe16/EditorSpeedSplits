@@ -165,9 +165,7 @@ namespace EditorSpeedSplits.GUIManager
             {
                 CreateSplitRow(
                     splitsContent,
-                    split.index,
-                    split.time,
-                    split.velocity
+                    split
                 );
             }
         }
@@ -175,13 +173,11 @@ namespace EditorSpeedSplits.GUIManager
 
         private void CreateSplitRow(
             Transform parent,
-            int cpIndex,
-            float timeSeconds,
-            float speed
+            EditorSplit split
             )
         {
             GameObject row = new GameObject(
-                $"SplitRow_CP{cpIndex}",
+                $"SplitRow_CP{split.index}",
                 typeof(RectTransform),
                 typeof(CanvasRenderer),
                 typeof(Image),
@@ -214,7 +210,7 @@ namespace EditorSpeedSplits.GUIManager
             nav.mode = Navigation.Mode.None;
             btn.navigation = nav;
 
-            btn.onClick.AddListener(() => OnSplitRowClicked(cpIndex));
+            btn.onClick.AddListener(() => OnSplitRowClicked(split));
 
             // --- Content ---
             GameObject content = new GameObject(
@@ -238,30 +234,61 @@ namespace EditorSpeedSplits.GUIManager
 
             CreateSplitText(
                 content.transform,
-                cpIndex!=0? $"CP{cpIndex}" : "FIN",
+                split.index != 0 ? $"CP{split.index}" : "FIN",
                 0.25f,
                 TMPro.TextAlignmentOptions.Left
             );
 
             CreateSplitText(
                 content.transform,
-                FormatTime(timeSeconds),
+                FormatTime(split.time),
                 0.45f,
                 TMPro.TextAlignmentOptions.Center
             );
 
             CreateSplitText(
                 content.transform,
-                speed.ToString("N2"),
+                split.velocity.ToString("N2"),
                 0.3f,
                 TMPro.TextAlignmentOptions.Right
             );
         }
 
 
-        private void OnSplitRowClicked(int cpIndex)
+        private void OnSplitRowClicked(EditorSplit split)
         {
-            Plugin.logger.LogInfo($"Clicked CP{cpIndex} (camera jump not implemented yet)");
+            if (split == null)
+                return;
+
+            if (!TryMoveEditorCamera(split.planePosition, split.planeOrientation))
+            {
+                Plugin.logger.LogWarning($"Could not move editor camera for split {split.index}.");
+                return;
+            }
+
+            Plugin.logger.LogInfo($"Moved editor camera to split {split.index} at {split.planePosition} / {split.planeOrientation}");
+        }
+
+        private bool TryMoveEditorCamera(Vector3 planePosition, Vector3 planeOrientation)
+        {
+            if (Plugin.central?.cam == null)
+                return false;
+
+            var moveCamera = Plugin.central.cam;
+            if (moveCamera.cameraTransform == null)
+                return false;
+
+            moveCamera.transform.position = planePosition;
+
+            Quaternion targetRotation = Quaternion.Euler(planeOrientation);
+            moveCamera.cameraTransform.rotation = targetRotation;
+
+            // Keep LEV_MoveCamera input state aligned with the orientation we just applied.
+            // This avoids reflection on private fields and uses the public yaw/pitch values.
+            moveCamera.rotationX = Mathf.DeltaAngle(0f, planeOrientation.y);
+            moveCamera.rotationY = -Mathf.DeltaAngle(0f, planeOrientation.x);
+
+            return true;
         }
 
         private ColorBlock GetRowColors()
