@@ -260,14 +260,14 @@ namespace EditorSpeedSplits.GUIManager
             if (split == null)
                 return;
 
-            if (!TryMoveEditorCamera(split.planePosition, split.planeOrientation, split.bounds, split.zeepkistOrientation))
+            if (!TryMoveEditorCamera(split.planePosition, split.planeOrientation, split.bounds))
             {
                 Plugin.logger.LogWarning($"Could not move editor camera for split {split.index}.");
                 return;
             }
         }
 
-        private bool TryMoveEditorCamera(Vector3 planePosition, Vector3 planeOrientation, Bounds bounds, Vector3 zeepkistOrientation)
+        private bool TryMoveEditorCamera(Vector3 planePosition, Vector3 planeOrientation, Bounds bounds)
         {
             if (Plugin.central?.cam == null)
                 return false;
@@ -278,35 +278,24 @@ namespace EditorSpeedSplits.GUIManager
 
             Vector3 size;
             if (bounds == null)
-                size = Vector3.one * 1f;
+                size = Vector3.one * 5f;
             else
                 size = bounds.size;
 
             // ---- Dynamic Offsets ----
-            float cameraBackOffset = Mathf.Min(Mathf.Max(size.x, size.z) * 1.2f, 50);
-            float cameraHeightOffset = Mathf.Min(size.y * 1f, 10);
+            float cameraBackOffset = Mathf.Min(Mathf.Max(size.x, size.z) * 0.7f, 500);
+            float cameraHeightOffset = 5f;
 
             Vector3 planeDir = Vector3.ProjectOnPlane(planeOrientation, Vector3.up).normalized;
 
-            Vector3 carDir;
-            if (zeepkistOrientation == null)
-                carDir = planeDir;
-            else
-                carDir = Vector3.ProjectOnPlane(zeepkistOrientation, Vector3.up).normalized;
-
             if (planeDir.sqrMagnitude < 0.001f)
                 planeDir = Vector3.forward;
-
-            if (carDir.sqrMagnitude > 0.001f && Vector3.Dot(planeDir, carDir) < 0f)
-            {
-                planeDir = -planeDir;
-            }
 
             Vector3 projectedOrientation = planeDir;
 
 
             // Move camera to the plane position
-            moveCamera.transform.position = planePosition + Vector3.up * cameraHeightOffset - projectedOrientation * cameraBackOffset;
+            moveCamera.transform.position = planePosition + Vector3.up * cameraHeightOffset + projectedOrientation * cameraBackOffset;
 
             // Rotate camera to look at the plane orientation
             moveCamera.cameraTransform.LookAt(planePosition, Vector3.up);
