@@ -278,28 +278,26 @@ namespace EditorSpeedSplits.GUIManager
             if (moveCamera.cameraTransform == null)
                 return false;
 
-            const float cameraBackOffset = 2f;
-            const float cameraHeightOffset = 0.75f;
-            const float cameraPitchOffset = -10f;
+            const float cameraBackOffset = 20f;
+            const float cameraHeightOffset = 1f;
 
-            Quaternion planeRotation = Quaternion.Euler(planeOrientation);
-            Vector3 moveBack = planeRotation * Vector3.forward * cameraBackOffset;
-            Vector3 targetPosition = planePosition - moveBack + (Vector3.up * cameraHeightOffset);
-            Vector3 targetOrientation = new Vector3(
-                planeOrientation.x + cameraPitchOffset,
-                planeOrientation.y,
-                planeOrientation.z
-            );
 
-            moveCamera.transform.position = targetPosition;
+            Vector3 projectedOrientation = Vector3.ProjectOnPlane(planeOrientation, Vector3.up).normalized;
 
-            Quaternion targetRotation = Quaternion.Euler(targetOrientation);
-            moveCamera.cameraTransform.rotation = targetRotation;
+            if (projectedOrientation.sqrMagnitude < 0.001f)
+            {
+                // If the projected orientation is too small, use a default forward direction.
+                projectedOrientation = Vector3.forward;
+            }
 
-            // Keep LEV_MoveCamera input state aligned with the orientation we just applied.
-            // This avoids reflection on private fields and uses the public yaw/pitch values.
-            moveCamera.rotationX = Mathf.DeltaAngle(0f, targetOrientation.y);
-            moveCamera.rotationY = -Mathf.DeltaAngle(0f, targetOrientation.x);
+            // Move camera to the plane position
+            moveCamera.transform.position = planePosition + Vector3.up * cameraHeightOffset - projectedOrientation * cameraBackOffset;
+
+            // Rotate camera to look at the plane orientation
+            moveCamera.cameraTransform.LookAt(planePosition, Vector3.up);
+
+            moveCamera.rotationX = Mathf.DeltaAngle(0f, moveCamera.cameraTransform.eulerAngles.y);
+            moveCamera.rotationY = -Mathf.DeltaAngle(0f, moveCamera.cameraTransform.eulerAngles.x);
 
             return true;
         }
