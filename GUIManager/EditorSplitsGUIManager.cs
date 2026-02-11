@@ -275,10 +275,10 @@ namespace EditorSpeedSplits.GUIManager
                 return false;
 
             var moveCamera = Plugin.central.cam;
-            moveCamera.transform.position = planePosition;
-
             if (moveCamera.cameraTransform == null)
                 return false;
+
+            moveCamera.transform.position = planePosition;
 
             Quaternion targetRotation = Quaternion.Euler(planeOrientation);
             moveCamera.cameraTransform.rotation = targetRotation;
