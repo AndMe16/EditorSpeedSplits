@@ -275,18 +275,31 @@ namespace EditorSpeedSplits.GUIManager
                 return false;
 
             var moveCamera = Plugin.central.cam;
-            moveCamera.transform.position = planePosition;
-
             if (moveCamera.cameraTransform == null)
                 return false;
 
-            Quaternion targetRotation = Quaternion.Euler(planeOrientation);
+            const float cameraBackOffset = 2f;
+            const float cameraHeightOffset = 0.75f;
+            const float cameraPitchOffset = -10f;
+
+            Quaternion planeRotation = Quaternion.Euler(planeOrientation);
+            Vector3 moveBack = planeRotation * Vector3.forward * cameraBackOffset;
+            Vector3 targetPosition = planePosition - moveBack + (Vector3.up * cameraHeightOffset);
+            Vector3 targetOrientation = new Vector3(
+                planeOrientation.x + cameraPitchOffset,
+                planeOrientation.y,
+                planeOrientation.z
+            );
+
+            moveCamera.transform.position = targetPosition;
+
+            Quaternion targetRotation = Quaternion.Euler(targetOrientation);
             moveCamera.cameraTransform.rotation = targetRotation;
 
             // Keep LEV_MoveCamera input state aligned with the orientation we just applied.
             // This avoids reflection on private fields and uses the public yaw/pitch values.
-            moveCamera.rotationX = Mathf.DeltaAngle(0f, planeOrientation.y);
-            moveCamera.rotationY = -Mathf.DeltaAngle(0f, planeOrientation.x);
+            moveCamera.rotationX = Mathf.DeltaAngle(0f, targetOrientation.y);
+            moveCamera.rotationY = -Mathf.DeltaAngle(0f, targetOrientation.x);
 
             return true;
         }
