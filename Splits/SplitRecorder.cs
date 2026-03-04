@@ -57,5 +57,16 @@ namespace EditorSpeedSplits.Splits
                 Plugin.logger.LogInfo($"Deleted best splits for level {levelName} from storage.");
             }
         }
+
+        public static bool HasSplits(string levelName)
+        {
+            string identifier = levelName.Replace(Path.DirectorySeparatorChar, '_')
+                .Replace(Path.AltDirectorySeparatorChar, '_');
+
+            if (!Plugin.Instance.personalBestSplitsStorage.JsonFileExists(identifier))
+                return false;
+
+            return true;
+        }
     }
 }

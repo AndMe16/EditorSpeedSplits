@@ -95,6 +95,9 @@ namespace EditorSpeedSplits
 
             }
 
+            if (!SplitRecorder.HasSplits(fullLevelName))
+                return;
+
             SetupEditorUI();
         }
 
