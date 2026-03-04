@@ -18,14 +18,28 @@ namespace EditorSpeedSplits.GUIManager
         private bool splitsVisible;
         private TMP_FontAsset cachedEditorFont;
         private Sprite cachedSprite;
+        private Transform modRootTransform;
+        private bool? lastExceedsTopAnchor;
 
         internal void Initialize()
         {
             if (!CreateModRoot(out Transform modRoot))
                 return;
 
-            CreateEditorSplitsUI(modRoot);
-            CreateSplitsPanel(modRoot);
+            modRootTransform = modRoot;
+
+            CreateEditorSplitsUI(modRootTransform);
+            CreateSplitsPanel(modRootTransform);
+            UpdatePanelLayout(modRootTransform);
+
+        }
+
+        private void LateUpdate()
+        {
+            if (modRootTransform == null && !CreateModRoot(out modRootTransform))
+                return;
+
+            UpdatePanelLayout(modRootTransform);
         }
 
 
@@ -75,8 +89,13 @@ namespace EditorSpeedSplits.GUIManager
 
         internal void CreateEditorSplitsUI(Transform modRoot)
         {
-            if (modRoot.Find("ButtonPanel") != null)
+            Transform existingPanel = modRoot.Find("ButtonPanel");
+            if (existingPanel != null)
+            {
+                buttonsPanel = existingPanel.gameObject;
                 return;
+            }
+
 
             buttonsPanel = new GameObject(
                 "ButtonPanel",
@@ -499,8 +518,13 @@ namespace EditorSpeedSplits.GUIManager
 
         internal void CreateSplitsPanel(Transform modRoot)
         {
-            if (modRoot.Find("SplitsPanel") != null)
+            Transform existingPanel = modRoot.Find("SplitsPanel");
+            if (existingPanel != null)
+            {
+                splitsPanel = existingPanel.gameObject;
                 return;
+            }
+
 
             splitsPanel = new GameObject(
                 "SplitsPanel",
@@ -601,6 +625,57 @@ namespace EditorSpeedSplits.GUIManager
 
             splitsPanel.SetActive(false);
         }
+
+        private void UpdatePanelLayout(Transform modRoot)
+        {
+            if (modRoot == null)
+                return;
+
+            RectTransform modRootRT = modRoot.GetComponent<RectTransform>();
+            if (modRootRT == null)
+                return;
+
+            if (buttonsPanel == null)
+                buttonsPanel = modRoot.Find("ButtonPanel")?.gameObject;
+            if (splitsPanel == null)
+                splitsPanel = modRoot.Find("SplitsPanel")?.gameObject;
+
+            if (buttonsPanel == null || splitsPanel == null)
+                return;
+
+            RectTransform buttonRT = buttonsPanel.GetComponent<RectTransform>();
+            RectTransform splitsRT = splitsPanel.GetComponent<RectTransform>();
+            if (buttonRT == null || splitsRT == null)
+                return;
+
+            bool exceedsTop = modRootRT.anchorMax.y > 0.8f;
+            if (lastExceedsTopAnchor.HasValue && lastExceedsTopAnchor.Value == exceedsTop)
+                return;
+
+            lastExceedsTopAnchor = exceedsTop;
+
+            if (exceedsTop)
+            {
+                buttonRT.anchorMin = new Vector2(0.30f, 0.91f);
+                buttonRT.anchorMax = new Vector2(0.70f, 1f);
+                splitsRT.anchorMin = new Vector2(0f, 0f);
+                splitsRT.anchorMax = new Vector2(1f, 0.88f);
+            }
+            else
+            {
+                buttonRT.anchorMin = new Vector2(0.30f, 0f);
+                buttonRT.anchorMax = new Vector2(0.70f, 0.09f);
+                splitsRT.anchorMin = new Vector2(0f, 0.12f);
+                splitsRT.anchorMax = new Vector2(1f, 1f);
+            }
+
+            buttonRT.offsetMin = Vector2.zero;
+            buttonRT.offsetMax = Vector2.zero;
+            splitsRT.offsetMin = Vector2.zero;
+            splitsRT.offsetMax = Vector2.zero;
+        }
+
+
 
         private void OnDestroy()
         {
