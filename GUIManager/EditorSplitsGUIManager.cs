@@ -99,7 +99,12 @@ namespace EditorSpeedSplits.GUIManager
                 new Color(1f, 0.55f, 0.04f, 1f);
             var sprite = GetRoundedButtonSprite();
             if (sprite != null)
+            {
                 img.sprite = sprite;
+                img.type = Image.Type.Sliced;
+                img.pixelsPerUnitMultiplier = 1f;
+            }
+
 
             // --- Buttons ---
             CreateButton(
@@ -400,7 +405,12 @@ namespace EditorSpeedSplits.GUIManager
 
             var sprite = GetRoundedButtonSprite();
             if (sprite != null)
+            {
                 img.sprite = sprite;
+                img.type = Image.Type.Sliced;
+                img.pixelsPerUnitMultiplier = 1f;
+            }
+
 
             CreateTMPLabel(go.transform, label);
 
@@ -512,7 +522,12 @@ namespace EditorSpeedSplits.GUIManager
 
             var sprite = GetRoundedButtonSprite();
             if (sprite != null)
+            {
                 img.sprite = sprite;
+                img.type = Image.Type.Sliced;
+                img.pixelsPerUnitMultiplier = 1f;
+            }
+
 
             // --- Scroll View ---
             GameObject scrollView = new GameObject(
