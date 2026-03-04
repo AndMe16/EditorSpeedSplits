@@ -66,6 +66,8 @@ namespace EditorSpeedSplits.Splits
             if (!Plugin.Instance.personalBestSplitsStorage.JsonFileExists(identifier))
                 return false;
 
+            Plugin.logger.LogInfo($"Best splits for level {levelName} exist in storage.");
+
             return true;
         }
     }

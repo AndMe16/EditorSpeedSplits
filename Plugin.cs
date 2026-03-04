@@ -95,10 +95,7 @@ namespace EditorSpeedSplits
 
             }
 
-            if (!SplitRecorder.HasSplits(fullLevelName))
-                return;
-
-            SetupEditorUI();
+            SyncEditorUIWithSplitsAvailability();
         }
 
         private void OnPlayerSpawned()
@@ -113,12 +110,7 @@ namespace EditorSpeedSplits
         private void OnExitedLevelEditor()
         {
             central = null;
-            if (uiRoot != null)
-            {
-                Destroy(uiRoot);
-                uiRoot = null;
-                guiManager = null;
-            }
+            DestroyEditorUI();
         }
 
 
@@ -169,6 +161,24 @@ namespace EditorSpeedSplits
             return selected.GetComponent<TMP_InputField>() != null;
         }
 
+        internal static void SyncEditorUIWithSplitsAvailability()
+        {
+            if (string.IsNullOrEmpty(fullLevelName))
+            {
+                Instance?.DestroyEditorUI();
+                return;
+            }
+
+            if (SplitRecorder.HasSplits(fullLevelName))
+            {
+                Instance?.SetupEditorUI();
+                return;
+            }
+
+            Instance?.DestroyEditorUI();
+        }
+
+
         private void SetupEditorUI()
         {
             if (guiManager != null)
@@ -178,6 +188,17 @@ namespace EditorSpeedSplits
             guiManager = uiRoot.AddComponent<EditorSplitsGUIManager>();
             guiManager.Initialize();
         }
+
+        private void DestroyEditorUI()
+        {
+            if (uiRoot == null)
+                return;
+
+            Destroy(uiRoot);
+            uiRoot = null;
+            guiManager = null;
+        }
+
 
         internal static ReplayManager.ReplayInfo GetReplaySplits()
         {

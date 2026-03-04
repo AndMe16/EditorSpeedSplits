@@ -20,6 +20,8 @@ namespace EditorSpeedSplits.Patches
             Plugin.fullLevelName = LevelIdentifier.MakeLevelIdentifier(
                 Path.ChangeExtension(filePath, null));
 
+            Plugin.SyncEditorUIWithSplitsAvailability();
+
             Plugin.guiManager?.RefreshSplits();
         }
     }
