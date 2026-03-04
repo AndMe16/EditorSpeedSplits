@@ -12,7 +12,7 @@ namespace EditorSpeedSplits.UI
         {
             if (gui.Menu("Reset Splits"))
             {
-                Plugin.ResetSplitsForCurrentLevel();
+                Plugin.ResetSplitsForCurrentLevel(true);
             }
         }
     }

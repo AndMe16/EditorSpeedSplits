@@ -149,7 +149,7 @@ namespace EditorSpeedSplits.GUIManager
 
         private void ResetSplits()
         {
-            Plugin.ResetSplitsForCurrentLevel();
+            Plugin.ResetSplitsForCurrentLevel(true);
             if (splitsVisible)
                 ToggleSplitsList();
         }

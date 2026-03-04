@@ -75,7 +75,7 @@ namespace EditorSpeedSplits
             if (IsTypingInInputField())
                 return;
 
-            ResetSplitsForCurrentLevel();
+            ResetSplitsForCurrentLevel(true);
         }
 
         private void OnEnteredLevelEditor()
@@ -114,7 +114,7 @@ namespace EditorSpeedSplits
         }
 
 
-        internal static void ResetSplitsForCurrentLevel()
+        internal static void ResetSplitsForCurrentLevel(bool ShowMessage)
         {
 
             if (!LevelEditorApi.IsTestingLevel && !LevelEditorApi.IsInLevelEditor)
@@ -146,7 +146,8 @@ namespace EditorSpeedSplits
             guiManager?.RefreshSplits();
 
             logger.LogInfo($"Splits reset for level {fullLevelName}");
-            MessengerApi.Log("[EditorSpeedSplits] Splits Reset");
+            if (ShowMessage)
+                MessengerApi.Log("[EditorSpeedSplits] Splits Reset");
         }
 
         private bool IsTypingInInputField()

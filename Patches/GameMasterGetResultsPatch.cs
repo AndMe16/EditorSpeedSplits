@@ -1,5 +1,6 @@
 using EditorSpeedSplits.Splits;
 using HarmonyLib;
+using ZeepSDK.Messaging;
 using ZeepSDK.Racing;
 
 namespace EditorSpeedSplits.Patches
@@ -32,6 +33,12 @@ namespace EditorSpeedSplits.Patches
             if (string.IsNullOrEmpty(currentFullLevelName))
                 return;
 
+            if (!SplitRecorder.HasSplits(currentFullLevelName))
+            {
+                Plugin.ResetSplitsForCurrentLevel(false);
+                Plugin.logger.LogInfo($"No splits file found for {currentFullLevelName}, initializing empty splits.");
+            }
+
             if (ReplayManager.Instance.Replays.TryGetValue(
                 currentFullLevelName,
                 out ReplayManager.ReplayInfo replayInfo))
@@ -47,6 +54,8 @@ namespace EditorSpeedSplits.Patches
                 result.time,
                 result.split_times
             );
+
+            MessengerApi.LogSuccess("[EditorSpeedSplits] New PB! Recording Splits");
         }
     }
 }

@@ -21,7 +21,7 @@ namespace EditorSpeedSplits.Configuration
 
         private static void OnResetSplits(object sender, System.EventArgs e)
         {
-            Plugin.ResetSplitsForCurrentLevel();
+            Plugin.ResetSplitsForCurrentLevel(true);
         }
 
         private void OnDestroy()
