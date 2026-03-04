@@ -53,15 +53,15 @@ namespace EditorSpeedSplits.GUIManager
             if (modRoot == null)
             {
                 GameObject go = new GameObject(
-                    "EditorSplits_UI",
+                    "EditorSplits_UI_",
                     typeof(RectTransform)
                 );
                 go.transform.SetParent(gameView, false);
                 modRoot = go.transform;
 
                 RectTransform rt = modRoot.GetComponent<RectTransform>();
-                rt.anchorMin = new Vector2(0f, 0.5f);
-                rt.anchorMax = new Vector2(0.25f, 1f);
+                rt.anchorMin = new Vector2(0.375f, 0.02f);
+                rt.anchorMax = new Vector2(0.625f, 0.5f);
                 rt.pivot = new Vector2(0.5f, 0.5f);
                 rt.offsetMin = new Vector2(0, 0);
                 rt.offsetMax = new Vector2(0, 0);
@@ -88,8 +88,8 @@ namespace EditorSpeedSplits.GUIManager
             AddInputBlocker(buttonsPanel);
 
             RectTransform panelRT = buttonsPanel.GetComponent<RectTransform>();
-            panelRT.anchorMin = new Vector2(0.30f, 0.88f);
-            panelRT.anchorMax = new Vector2(0.70f, 0.97f);
+            panelRT.anchorMin = new Vector2(0.30f, 0f);
+            panelRT.anchorMax = new Vector2(0.70f, 0.09f);
             panelRT.pivot = new Vector2(0.5f, 0.5f);
             panelRT.offsetMin = Vector2.zero;
             panelRT.offsetMax = Vector2.zero;
@@ -512,8 +512,8 @@ namespace EditorSpeedSplits.GUIManager
             AddInputBlocker(splitsPanel);
 
             RectTransform rt = splitsPanel.GetComponent<RectTransform>();
-            rt.anchorMin = new Vector2(0.05f, 0.05f);
-            rt.anchorMax = new Vector2(0.95f, 0.85f);
+            rt.anchorMin = new Vector2(0f, 0.12f);
+            rt.anchorMax = new Vector2(1f, 1f);
             rt.offsetMin = Vector2.zero;
             rt.offsetMax = Vector2.zero;
 
