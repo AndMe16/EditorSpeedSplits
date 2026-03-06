@@ -93,6 +93,9 @@ namespace EditorSpeedSplits.GUIManager
             if (existingPanel != null)
             {
                 buttonsPanel = existingPanel.gameObject;
+                EnsureHeaderBar(buttonsPanel.transform, modRoot);
+                EnsurePrimaryButtons(buttonsPanel.transform);
+
                 return;
             }
 
@@ -124,28 +127,131 @@ namespace EditorSpeedSplits.GUIManager
                 img.pixelsPerUnitMultiplier = 1f;
             }
 
-
-            // --- Buttons ---
-            CreateButton(
-                buttonsPanel.transform,
-                "SplitsButton",
-                "Splits",
-                new Vector2(0.05f, 0.1f),
-                new Vector2(0.45f, 0.9f),
-                new Color(1f, 0.75f, 0.39f, 1f),
-                ToggleSplitsList
-            );
-
-            CreateButton(
-                buttonsPanel.transform,
-                "ResetButton",
-                "Reset",
-                new Vector2(0.55f, 0.1f),
-                new Vector2(0.95f, 0.9f),
-                new Color(0f, 0.54f, 0.82f, 1f),
-                ResetSplits
-            );
+            EnsureHeaderBar(buttonsPanel.transform, modRoot);
+            EnsurePrimaryButtons(buttonsPanel.transform);
         }
+
+        // --- Buttons ---
+        private void EnsurePrimaryButtons(Transform parent)
+        {
+            if (parent.Find("SplitsButton") == null)
+            {
+                CreateButton(
+                    parent,
+                    "SplitsButton",
+                    "Splits",
+                    new Vector2(0.05f, 0.1f),
+                    new Vector2(0.45f, 0.66f),
+                    new Color(1f, 0.75f, 0.39f, 1f),
+                    ToggleSplitsList
+                );
+            }
+
+            if (parent.Find("ResetButton") == null)
+            {
+                CreateButton(
+                    parent,
+                    "ResetButton",
+                    "Reset",
+                    new Vector2(0.55f, 0.1f),
+                    new Vector2(0.95f, 0.66f),
+                    new Color(0f, 0.54f, 0.82f, 1f),
+                    ResetSplits
+                );
+            }
+        }
+
+        private void EnsureHeaderBar(Transform parent, Transform modRoot)
+        {
+            Transform existingHeader = parent.Find("HeaderBar");
+            GameObject headerBar;
+            if (existingHeader == null)
+            {
+                headerBar = new GameObject(
+                    "HeaderBar",
+                    typeof(RectTransform),
+                    typeof(CanvasRenderer),
+                    typeof(Image),
+                    typeof(EditorSplitsUIDragHandle)
+                );
+                headerBar.transform.SetParent(parent, false);
+            }
+            else
+            {
+                headerBar = existingHeader.gameObject;
+                if (headerBar.GetComponent<EditorSplitsUIDragHandle>() == null)
+                    headerBar.AddComponent<EditorSplitsUIDragHandle>();
+            }
+
+            var headerRT = headerBar.GetComponent<RectTransform>();
+            headerRT.anchorMin = new Vector2(0f, 0.7f);
+            headerRT.anchorMax = new Vector2(1f, 1f);
+            headerRT.pivot = new Vector2(0.5f, 0.5f);
+            headerRT.offsetMin = Vector2.zero;
+            headerRT.offsetMax = Vector2.zero;
+
+            var headerImage = headerBar.GetComponent<Image>();
+            headerImage.color = new Color(0.1f, 0.35f, 0.85f, 0.95f);
+            var sprite = GetRoundedButtonSprite();
+            if (sprite != null)
+            {
+                headerImage.sprite = sprite;
+                headerImage.type = Image.Type.Sliced;
+                headerImage.pixelsPerUnitMultiplier = 1f;
+            }
+
+            var dragHandle = headerBar.GetComponent<EditorSplitsUIDragHandle>();
+            dragHandle.Target = modRoot.GetComponent<RectTransform>();
+
+            EnsureResizeHandle(headerBar.transform, modRoot);
+        }
+
+        private void EnsureResizeHandle(Transform headerBar, Transform modRoot)
+        {
+            Transform existingHandle = headerBar.Find("ResizeHandle");
+            GameObject resizeHandle;
+            if (existingHandle == null)
+            {
+                resizeHandle = new GameObject(
+                    "ResizeHandle",
+                    typeof(RectTransform),
+                    typeof(CanvasRenderer),
+                    typeof(Image),
+                    typeof(EditorSplitsUIResizeHandle)
+                );
+                resizeHandle.transform.SetParent(headerBar, false);
+            }
+            else
+            {
+                resizeHandle = existingHandle.gameObject;
+                if (resizeHandle.GetComponent<EditorSplitsUIResizeHandle>() == null)
+                    resizeHandle.AddComponent<EditorSplitsUIResizeHandle>();
+            }
+
+            RectTransform handleRT = resizeHandle.GetComponent<RectTransform>();
+            handleRT.anchorMin = new Vector2(0.90f, 0.1f);
+            handleRT.anchorMax = new Vector2(0.99f, 0.9f);
+            handleRT.pivot = new Vector2(0.5f, 0.5f);
+            handleRT.offsetMin = Vector2.zero;
+            handleRT.offsetMax = Vector2.zero;
+
+            Image handleImage = resizeHandle.GetComponent<Image>();
+            handleImage.color = new Color(0f, 0f, 0f, 0.20f);
+
+            var resizeHandleComponent = resizeHandle.GetComponent<EditorSplitsUIResizeHandle>();
+            resizeHandleComponent.Target = modRoot.GetComponent<RectTransform>();
+
+            Transform arrowLabel = resizeHandle.transform.Find("Arrow");
+            if (arrowLabel == null)
+            {
+                var text = CreateTMPLabel(resizeHandle.transform, "↘");
+                text.name = "Arrow";
+                text.alignment = TextAlignmentOptions.Center;
+                text.fontSize = 18f;
+                text.enableAutoSizing = false;
+            }
+        }
+
 
         private void ResetSplits()
         {
