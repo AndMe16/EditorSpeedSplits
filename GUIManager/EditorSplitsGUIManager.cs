@@ -80,7 +80,7 @@ namespace EditorSpeedSplits.GUIManager
                 rt.offsetMin = new Vector2(0, 0);
                 rt.offsetMax = new Vector2(0, 0);
 
-                UIApi.AddToConfigurator(rt);
+                //UIApi.AddToConfigurator(rt);
             }
 
 
