@@ -63,7 +63,7 @@ namespace EditorSpeedSplits.GUIManager
                 return false;
             }
 
-            modRoot = gameView.Find("EditorSplits_UI");
+            modRoot = gameView.Find("EditorSplits_UI_");
             if (modRoot == null)
             {
                 GameObject go = new GameObject(
