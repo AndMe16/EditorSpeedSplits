@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.EventSystems;
 
 namespace EditorSpeedSplits.GUIManager
@@ -6,41 +6,66 @@ namespace EditorSpeedSplits.GUIManager
     internal class EditorSplitsUIResizeHandle : MonoBehaviour, IBeginDragHandler, IDragHandler
     {
         internal RectTransform Target { get; set; }
+        internal float MinWidth { get; set; } = 280f;
+        internal float MinHeight { get; set; } = 110f;
 
-        private RectTransform parentRect;
-
-        private const float MinWidth = 280f;
-        private const float MinHeight = 110f;
+        private Vector2 targetBottomLeft;
 
         public void OnBeginDrag(PointerEventData eventData)
         {
             if (Target == null)
                 return;
 
-            parentRect = Target.parent as RectTransform;
+            RectTransform parentRect = Target.parent as RectTransform;
+            if (parentRect == null)
+                return;
+
+            NormalizeAnchorsForRuntimeTransform(Target, parentRect);
+            targetBottomLeft = GetBottomLeftLocal(Target, parentRect);
         }
 
         public void OnDrag(PointerEventData eventData)
         {
-            if (Target == null || parentRect == null)
+            if (Target == null)
                 return;
 
-            Vector2 delta = eventData.delta;
+            RectTransform parentRect = Target.parent as RectTransform;
+            if (parentRect == null)
+                return;
 
-            Vector2 normalizedDelta = new Vector2(
-                delta.x / parentRect.rect.width,
-                delta.y / parentRect.rect.height
+            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(parentRect, eventData.position, eventData.pressEventCamera, out Vector2 currentLocal))
+                return;
+
+            float newWidth = Mathf.Max(MinWidth, currentLocal.x - targetBottomLeft.x);
+            float newHeight = Mathf.Max(MinHeight, currentLocal.y - targetBottomLeft.y);
+
+            Target.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, newWidth);
+            Target.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, newHeight);
+        }
+
+        private static void NormalizeAnchorsForRuntimeTransform(RectTransform target, RectTransform parent)
+        {
+            Vector2 bottomLeft = GetBottomLeftLocal(target, parent);
+            Vector2 normalizedAnchor = new Vector2(
+                Mathf.InverseLerp(parent.rect.xMin, parent.rect.xMax, bottomLeft.x),
+                Mathf.InverseLerp(parent.rect.yMin, parent.rect.yMax, bottomLeft.y)
             );
 
-            Vector2 newAnchorMax = Target.anchorMax + normalizedDelta;
+            Vector2 currentSize = target.rect.size;
 
-            float minAnchorWidth = MinWidth / parentRect.rect.width;
-            float minAnchorHeight = MinHeight / parentRect.rect.height;
+            target.anchorMin = normalizedAnchor;
+            target.anchorMax = normalizedAnchor;
+            target.pivot = Vector2.zero;
+            target.anchoredPosition = Vector2.zero;
+            target.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, currentSize.x);
+            target.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, currentSize.y);
+        }
 
-            newAnchorMax.x = Mathf.Max(newAnchorMax.x, Target.anchorMin.x + minAnchorWidth);
-            newAnchorMax.y = Mathf.Max(newAnchorMax.y, Target.anchorMin.y + minAnchorHeight);
-
-            Target.anchorMax = newAnchorMax;
+        private static Vector2 GetBottomLeftLocal(RectTransform target, RectTransform parent)
+        {
+            Vector3[] corners = new Vector3[4];
+            target.GetWorldCorners(corners);
+            return parent.InverseTransformPoint(corners[0]);
         }
     }
 }
