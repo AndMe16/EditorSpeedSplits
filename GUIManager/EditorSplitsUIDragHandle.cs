@@ -47,11 +47,12 @@ namespace EditorSpeedSplits.GUIManager
         {
             Vector2 bottomLeft = GetBottomLeftLocal(target, parent);
             Vector2 currentSize = target.rect.size;
+            Vector2 parentBottomLeft = parent.rect.min;
 
             target.anchorMin = Vector2.zero;
             target.anchorMax = Vector2.zero;
             target.pivot = Vector2.zero;
-            target.anchoredPosition = bottomLeft;
+            target.anchoredPosition = bottomLeft - parentBottomLeft;
             target.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, currentSize.x);
             target.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, currentSize.y);
         }
