@@ -252,6 +252,7 @@ namespace EditorSpeedSplits.GUIManager
             }
         }
 
+
         private void ResetSplits()
         {
             Plugin.ResetSplitsForCurrentLevel(true);
