@@ -6,11 +6,10 @@ namespace EditorSpeedSplits.GUIManager
     internal class EditorSplitsUIResizeHandle : MonoBehaviour, IBeginDragHandler, IDragHandler
     {
         internal RectTransform Target { get; set; }
+        internal float MinWidth { get; set; } = 280f;
+        internal float MinHeight { get; set; } = 110f;
 
         private Vector2 targetBottomLeft;
-
-        private const float MinWidth = 280f;
-        private const float MinHeight = 110f;
 
         public void OnBeginDrag(PointerEventData eventData)
         {

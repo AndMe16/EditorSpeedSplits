@@ -93,7 +93,7 @@ namespace EditorSpeedSplits.GUIManager
             if (existingPanel != null)
             {
                 buttonsPanel = existingPanel.gameObject;
-                EnsureHeaderBar(buttonsPanel.transform, buttonsPanel.GetComponent<RectTransform>(), new Color(0.1f, 0.35f, 0.85f, 0.95f));
+                EnsureHeaderBar(buttonsPanel.transform, buttonsPanel.GetComponent<RectTransform>(), new Color(0.1f, 0.35f, 0.85f, 0.95f), 110f, 40f);
                 EnsurePrimaryButtons(buttonsPanel.transform);
                 return;
             }
@@ -126,7 +126,7 @@ namespace EditorSpeedSplits.GUIManager
                 img.pixelsPerUnitMultiplier = 1f;
             }
 
-            EnsureHeaderBar(buttonsPanel.transform, buttonsPanel.GetComponent<RectTransform>(), new Color(0.1f, 0.35f, 0.85f, 0.95f));
+            EnsureHeaderBar(buttonsPanel.transform, buttonsPanel.GetComponent<RectTransform>(), new Color(0.1f, 0.35f, 0.85f, 0.95f), 110f, 40f);
             EnsurePrimaryButtons(buttonsPanel.transform);
         }
 
@@ -159,7 +159,7 @@ namespace EditorSpeedSplits.GUIManager
             }
         }
 
-        private void EnsureHeaderBar(Transform panel, RectTransform target, Color color)
+        private void EnsureHeaderBar(Transform panel, RectTransform target, Color color, float minWidth, float minHeight)
         {
             Transform existingHeader = panel.Find("HeaderBar");
             GameObject headerBar;
@@ -201,10 +201,10 @@ namespace EditorSpeedSplits.GUIManager
             var dragHandle = headerBar.GetComponent<EditorSplitsUIDragHandle>();
             dragHandle.Target = target;
 
-            EnsureResizeHandle(headerBar.transform, target);
+            EnsureResizeHandle(headerBar.transform, target, minWidth, minHeight);
         }
 
-        private void EnsureResizeHandle(Transform headerBar, RectTransform target)
+        private void EnsureResizeHandle(Transform headerBar, RectTransform target, float minWidth, float minHeight)
         {
             Transform existingHandle = headerBar.Find("ResizeHandle");
             GameObject resizeHandle;
@@ -238,6 +238,8 @@ namespace EditorSpeedSplits.GUIManager
 
             var resizeHandleComponent = resizeHandle.GetComponent<EditorSplitsUIResizeHandle>();
             resizeHandleComponent.Target = target;
+            resizeHandleComponent.MinWidth = minWidth;
+            resizeHandleComponent.MinHeight = minHeight;
 
             Transform arrowLabel = resizeHandle.transform.Find("Arrow");
             if (arrowLabel == null)
@@ -625,7 +627,7 @@ namespace EditorSpeedSplits.GUIManager
             if (existingPanel != null)
             {
                 splitsPanel = existingPanel.gameObject;
-                EnsureHeaderBar(splitsPanel.transform, splitsPanel.GetComponent<RectTransform>(), new Color(0.09f, 0.25f, 0.62f, 0.92f));
+                EnsureHeaderBar(splitsPanel.transform, splitsPanel.GetComponent<RectTransform>(), new Color(0.09f, 0.25f, 0.62f, 0.92f), 280f, 110f);
                 return;
             }
 
@@ -656,7 +658,7 @@ namespace EditorSpeedSplits.GUIManager
                 img.pixelsPerUnitMultiplier = 1f;
             }
 
-            EnsureHeaderBar(splitsPanel.transform, splitsPanel.GetComponent<RectTransform>(), new Color(0.09f, 0.25f, 0.62f, 0.92f));
+            EnsureHeaderBar(splitsPanel.transform, splitsPanel.GetComponent<RectTransform>(), new Color(0.09f, 0.25f, 0.62f, 0.92f), 280f, 110f);
 
             // --- Scroll View ---
             GameObject scrollView = new GameObject(
