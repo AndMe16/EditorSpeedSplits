@@ -6,11 +6,10 @@ namespace EditorSpeedSplits.GUIManager
     internal class EditorSplitsUIResizeHandle : MonoBehaviour, IBeginDragHandler, IDragHandler
     {
         internal RectTransform Target { get; set; }
+        internal float MinWidth { get; set; } = 280f;
+        internal float MinHeight { get; set; } = 110f;
 
         private Vector2 targetBottomLeft;
-
-        private const float MinWidth = 280f;
-        private const float MinHeight = 110f;
 
         public void OnBeginDrag(PointerEventData eventData)
         {
@@ -47,17 +46,12 @@ namespace EditorSpeedSplits.GUIManager
         private static void NormalizeAnchorsForRuntimeTransform(RectTransform target, RectTransform parent)
         {
             Vector2 bottomLeft = GetBottomLeftLocal(target, parent);
-            Vector2 normalizedAnchor = new Vector2(
-                Mathf.InverseLerp(parent.rect.xMin, parent.rect.xMax, bottomLeft.x),
-                Mathf.InverseLerp(parent.rect.yMin, parent.rect.yMax, bottomLeft.y)
-            );
-
             Vector2 currentSize = target.rect.size;
 
-            target.anchorMin = normalizedAnchor;
-            target.anchorMax = normalizedAnchor;
+            target.anchorMin = Vector2.zero;
+            target.anchorMax = Vector2.zero;
             target.pivot = Vector2.zero;
-            target.anchoredPosition = Vector2.zero;
+            target.anchoredPosition = bottomLeft;
             target.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, currentSize.x);
             target.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, currentSize.y);
         }
