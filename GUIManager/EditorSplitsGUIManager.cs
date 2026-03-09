@@ -20,6 +20,23 @@ namespace EditorSpeedSplits.GUIManager
         private Sprite cachedSprite;
         private Transform modRootTransform;
 
+        // Shared constants
+        private const float DefaultPivot = 0.5f;
+        private const float FullAlpha = 1f;
+        private const float TextAutoSizeMin = 1f;
+        private const float TextUnderlayOffsetX = 0.7f;
+        private const float TextUnderlayOffsetY = -0.5f;
+        private const float TextOutlineWidth = 0.05f;
+        private const float HeaderPadMultiplier = 2f;
+
+        private static readonly Color SharedTextColor = Color.white;
+        private static readonly Color SharedTextShadowColor = Color.black;
+        private static readonly Color SplitsPanelHeaderColor = new Color(0.09f, 0.25f, 0.62f, 0.92f);
+        private static readonly Color SplitsPanelColor = new Color(0f, 0f, 0f, 0.2f);
+        private static readonly Color ResizeHandleColor = new Color(0f, 0f, 0f, 0.20f);
+        private static readonly Color SplitRowColor = new Color(1f, 1f, 1f, 0.5f);
+        private static readonly Color ViewportColor = new Color(1f, 1f, 1f, 0.01f);
+
         // Mod root
         private const float ModRootAnchorMinX = 0.375f;
         private const float ModRootAnchorMaxX = 0.625f;
@@ -35,24 +52,24 @@ namespace EditorSpeedSplits.GUIManager
         private const float ButtonPanelMinHeight = 40f;
         private const float ButtonPanelHeaderHeight = 15f;
         private const float ButtonPanelHeaderPad = 2f;
-        private Color ButtonPanelColor = new Color(1f, 0.55f, 0.04f, 1f); // Orange
-        private Color ButtonPanelHeaderColor = new Color(1f, 0.75f, 0.39f, 1f); // Blue
+        private static readonly Color ButtonPanelColor = new Color(1f, 0.55f, 0.04f, FullAlpha); // Orange
+        private static readonly Color ButtonPanelHeaderColor = new Color(1f, 0.75f, 0.39f, FullAlpha); // Blue
 
         // Primary buttons
-        private const float BottonsPad = 3f;
+        private const float ButtonsPad = 3f;
 
         // Splits button
         private const float SplitsButtonAnchorMinX = 0.0f;
         private const float SplitsButtonAnchorMaxX = 0.5f;
         private const float SplitsButtonAnchorMinY = 0f;
         private const float SplitsButtonAnchorMaxY = 1f;
-        private Color SplitsButtonColor = new Color(1f, 0.75f, 0.39f, 1f); // Lighter Orange
+        private static readonly Color SplitsButtonColor = new Color(1f, 0.75f, 0.39f, FullAlpha); // Lighter Orange
         // Reset button
         private const float ResetButtonAnchorMinX = 0.5f;
         private const float ResetButtonAnchorMaxX = 1f;
         private const float ResetButtonAnchorMinY = 0f;
         private const float ResetButtonAnchorMaxY = 1f;
-        private Color ResetButtonColor = new Color(0f, 0.54f, 0.82f, 1f); // Lighter Blue
+        private static readonly Color ResetButtonColor = new Color(0f, 0.54f, 0.82f, FullAlpha); // Lighter Blue
 
         // Header bar
         private const float HeaderBarAnchorMinX = 0.02f;
@@ -65,6 +82,32 @@ namespace EditorSpeedSplits.GUIManager
         private const float SplitsPanelHeaderHeight = 24f;
                 
         private const float SplitsPanelHeaderPad = 4f;
+
+
+        // Split row
+        private const float SplitRowHeight = 28f;
+        private const float SplitRowContentPaddingX = 8f;
+        private const float SplitRowContentPaddingY = 2f;
+        private const float SplitRowContentSpacing = 8f;
+        private const float SplitRowTextFontSize = 14f;
+
+        // Resize handle
+        private const float ResizeHandleAnchorMinX = 0.90f;
+        private const float ResizeHandleAnchorMaxX = 0.99f;
+        private const float ResizeHandleAnchorMinY = 0.1f;
+        private const float ResizeHandleAnchorMaxY = 0.9f;
+        private const float ResizeHandleArrowFontSize = 18f;
+
+        // Splits panel
+        private const float SplitsPanelAnchorMinY = 0.17f;
+        private const float SplitsPanelScrollPadding = 10f;
+
+        // Camera offsets
+        private const float CameraDefaultBoundsSize = 5f;
+        private const float CameraBackOffsetScale = 0.7f;
+        private const float CameraBackOffsetMax = 500f;
+        private const float CameraHeightOffset = 5f;
+        private const float CameraDirectionThreshold = 0.001f;
 
         internal void Initialize()
         {
@@ -112,7 +155,7 @@ namespace EditorSpeedSplits.GUIManager
                 RectTransform rt = modRoot.GetComponent<RectTransform>();
                 rt.anchorMin = new Vector2(ModRootAnchorMinX, ModRootAnchorMinY);
                 rt.anchorMax = new Vector2(ModRootAnchorMaxX, ModRootAnchorMaxY);
-                rt.pivot = new Vector2(0.5f, 0.5f);
+                rt.pivot = new Vector2(DefaultPivot, DefaultPivot);
                 rt.offsetMin = new Vector2(0, 0);
                 rt.offsetMax = new Vector2(0, 0);
 
@@ -219,7 +262,7 @@ namespace EditorSpeedSplits.GUIManager
             var headerRT = headerBar.GetComponent<RectTransform>();
             headerRT.anchorMin = new Vector2(HeaderBarAnchorMinX, 1);
             headerRT.anchorMax = new Vector2(HeaderBarAnchorMaxX, 1);
-            headerRT.pivot = new Vector2(0.5f, 1f);
+            headerRT.pivot = new Vector2(DefaultPivot, FullAlpha);
             headerRT.sizeDelta = new Vector2(0f, headerHeight);
             headerRT.anchoredPosition = new Vector2(0f, -headerPad);
 
@@ -262,14 +305,14 @@ namespace EditorSpeedSplits.GUIManager
             }
 
             RectTransform handleRT = resizeHandle.GetComponent<RectTransform>();
-            handleRT.anchorMin = new Vector2(0.90f, 0.1f);
-            handleRT.anchorMax = new Vector2(0.99f, 0.9f);
-            handleRT.pivot = new Vector2(0.5f, 0.5f);
+            handleRT.anchorMin = new Vector2(ResizeHandleAnchorMinX, ResizeHandleAnchorMinY);
+            handleRT.anchorMax = new Vector2(ResizeHandleAnchorMaxX, ResizeHandleAnchorMaxY);
+            handleRT.pivot = new Vector2(DefaultPivot, DefaultPivot);
             handleRT.offsetMin = Vector2.zero;
             handleRT.offsetMax = Vector2.zero;
 
             Image handleImage = resizeHandle.GetComponent<Image>();
-            handleImage.color = new Color(0f, 0f, 0f, 0.20f);
+            handleImage.color = ResizeHandleColor;
 
             var resizeHandleComponent = resizeHandle.GetComponent<EditorSplitsUIResizeHandle>();
             resizeHandleComponent.Target = target;
@@ -282,7 +325,7 @@ namespace EditorSpeedSplits.GUIManager
                 var text = CreateTMPLabel(resizeHandle.transform, "->");
                 text.name = "Arrow";
                 text.alignment = TextAlignmentOptions.Center;
-                text.fontSize = 18f;
+                text.fontSize = ResizeHandleArrowFontSize;
                 text.enableAutoSizing = false;
             }
         }
@@ -353,12 +396,12 @@ namespace EditorSpeedSplits.GUIManager
 
             // --- Layout control ---
             LayoutElement layoutElement = row.GetComponent<LayoutElement>();
-            layoutElement.preferredHeight = 28f;
-            layoutElement.minHeight = 28f;
+            layoutElement.preferredHeight = SplitRowHeight;
+            layoutElement.minHeight = SplitRowHeight;
             layoutElement.flexibleHeight = 0f;
 
             Image bg = row.GetComponent<Image>();
-            bg.color = new Color(1f, 1f, 1f, 0.5f);
+            bg.color = SplitRowColor;
 
             var sprite = GetRoundedButtonSprite();
             if (sprite != null)
@@ -388,11 +431,11 @@ namespace EditorSpeedSplits.GUIManager
             RectTransform contentRT = content.GetComponent<RectTransform>();
             contentRT.anchorMin = Vector2.zero;
             contentRT.anchorMax = Vector2.one;
-            contentRT.offsetMin = new Vector2(8, 2);
-            contentRT.offsetMax = new Vector2(-8, -2);
+            contentRT.offsetMin = new Vector2(SplitRowContentPaddingX, SplitRowContentPaddingY);
+            contentRT.offsetMax = new Vector2(-SplitRowContentPaddingX, -SplitRowContentPaddingY);
 
             var hLayout = content.GetComponent<HorizontalLayoutGroup>();
-            hLayout.spacing = 8;
+            hLayout.spacing = SplitRowContentSpacing;
             hLayout.childAlignment = TextAnchor.MiddleLeft;
             hLayout.childForceExpandHeight = true;
             hLayout.childForceExpandWidth = true;
@@ -443,17 +486,17 @@ namespace EditorSpeedSplits.GUIManager
 
             Vector3 size;
             if (bounds == null)
-                size = Vector3.one * 5f;
+                size = Vector3.one * CameraDefaultBoundsSize;
             else
                 size = bounds.size;
 
             // ---- Dynamic Offsets ----
-            float cameraBackOffset = Mathf.Min(Mathf.Max(size.x, size.z) * 0.7f, 500);
-            float cameraHeightOffset = 5f;
+            float cameraBackOffset = Mathf.Min(Mathf.Max(size.x, size.z) * CameraBackOffsetScale, CameraBackOffsetMax);
+            float cameraHeightOffset = CameraHeightOffset;
 
             Vector3 planeDir = Vector3.ProjectOnPlane(planeOrientation, Vector3.up).normalized;
 
-            if (planeDir.sqrMagnitude < 0.001f)
+            if (planeDir.sqrMagnitude < CameraDirectionThreshold)
                 planeDir = Vector3.forward;
 
             Vector3 projectedOrientation = planeDir;
@@ -475,7 +518,7 @@ namespace EditorSpeedSplits.GUIManager
         {
             return new ColorBlock
             {
-                normalColor = new Color(0f, 0f, 0f, 1f),
+                normalColor = new Color(0f, 0f, 0f, FullAlpha),
                 highlightedColor = new Color(1f, 1f, 1f, 0.6f),
                 pressedColor = new Color(1f, 1f, 1f, 0.8f),
                 selectedColor = new Color(1f, 1f, 1f, 0.6f),
@@ -503,23 +546,23 @@ namespace EditorSpeedSplits.GUIManager
             var text = go.GetComponent<TMPro.TextMeshProUGUI>();
             text.text = value;
             text.alignment = alignment;
-            text.color = Color.white;
-            text.fontSize = 14;
+            text.color = SharedTextColor;
+            text.fontSize = SplitRowTextFontSize;
             text.enableAutoSizing = true;
-            text.fontSizeMin = 1;
+            text.fontSizeMin = TextAutoSizeMin;
 
             var font = GetEditorFont();
             if (font != null)
                 text.font = font;
 
             text.fontSharedMaterial.EnableKeyword("UNDERLAY_ON");
-            text.fontMaterial.SetFloat(ShaderUtilities.ID_UnderlayOffsetX, 0.7f);
-            text.fontMaterial.SetFloat(ShaderUtilities.ID_UnderlayOffsetY, -0.5f);
-            text.fontMaterial.SetColor(ShaderUtilities.ID_UnderlayColor, Color.black);
+            text.fontMaterial.SetFloat(ShaderUtilities.ID_UnderlayOffsetX, TextUnderlayOffsetX);
+            text.fontMaterial.SetFloat(ShaderUtilities.ID_UnderlayOffsetY, TextUnderlayOffsetY);
+            text.fontMaterial.SetColor(ShaderUtilities.ID_UnderlayColor, SharedTextShadowColor);
 
             text.fontSharedMaterial.EnableKeyword("OUTLINE_ON");
-            text.fontMaterial.SetFloat(ShaderUtilities.ID_OutlineWidth, 0.05f);
-            text.fontMaterial.SetColor(ShaderUtilities.ID_OutlineColor, Color.black);
+            text.fontMaterial.SetFloat(ShaderUtilities.ID_OutlineWidth, TextOutlineWidth);
+            text.fontMaterial.SetColor(ShaderUtilities.ID_OutlineColor, SharedTextShadowColor);
 
             LayoutElement layout = go.GetComponent<LayoutElement>();
             layout.flexibleWidth = widthRatio;
@@ -562,8 +605,8 @@ namespace EditorSpeedSplits.GUIManager
 
             rt.anchorMin = anchorMin;
             rt.anchorMax = anchorMax;
-            rt.offsetMin = new Vector2(BottonsPad, BottonsPad);
-            rt.offsetMax = new Vector2(-BottonsPad, -(ButtonPanelHeaderHeight + 2*ButtonPanelHeaderPad));
+            rt.offsetMin = new Vector2(ButtonsPad, ButtonsPad);
+            rt.offsetMax = new Vector2(-ButtonsPad, -(ButtonPanelHeaderHeight + HeaderPadMultiplier * ButtonPanelHeaderPad));
 
             Image img = go.GetComponent<Image>();
             img.color = backgroundColor;
@@ -636,22 +679,22 @@ namespace EditorSpeedSplits.GUIManager
             var text = go.GetComponent<TMPro.TextMeshProUGUI>();
             text.text = textValue;
             text.alignment = TMPro.TextAlignmentOptions.Center;
-            text.color = Color.white;
+            text.color = SharedTextColor;
 
             var font = GetEditorFont();
             if (font != null)
                 text.font = font;
             text.enableAutoSizing = true;
-            text.fontSizeMin = 1;
+            text.fontSizeMin = TextAutoSizeMin;
 
             text.fontSharedMaterial.EnableKeyword("UNDERLAY_ON");
-            text.fontMaterial.SetFloat(ShaderUtilities.ID_UnderlayOffsetX, 0.7f);
-            text.fontMaterial.SetFloat(ShaderUtilities.ID_UnderlayOffsetY, -0.5f);
-            text.fontMaterial.SetColor(ShaderUtilities.ID_UnderlayColor, Color.black);
+            text.fontMaterial.SetFloat(ShaderUtilities.ID_UnderlayOffsetX, TextUnderlayOffsetX);
+            text.fontMaterial.SetFloat(ShaderUtilities.ID_UnderlayOffsetY, TextUnderlayOffsetY);
+            text.fontMaterial.SetColor(ShaderUtilities.ID_UnderlayColor, SharedTextShadowColor);
 
             text.fontSharedMaterial.EnableKeyword("OUTLINE_ON");
-            text.fontMaterial.SetFloat(ShaderUtilities.ID_OutlineWidth, 0.05f);
-            text.fontMaterial.SetColor(ShaderUtilities.ID_OutlineColor, Color.black);
+            text.fontMaterial.SetFloat(ShaderUtilities.ID_OutlineWidth, TextOutlineWidth);
+            text.fontMaterial.SetColor(ShaderUtilities.ID_OutlineColor, SharedTextShadowColor);
 
             RectTransform rt = text.rectTransform;
             rt.anchorMin = Vector2.zero;
@@ -668,7 +711,7 @@ namespace EditorSpeedSplits.GUIManager
             if (existingPanel != null)
             {
                 splitsPanel = existingPanel.gameObject;
-                EnsureHeaderBar(splitsPanel.transform, splitsPanel.GetComponent<RectTransform>(), new Color(0.09f, 0.25f, 0.62f, 0.92f), SplitsPanelMinWidth, SplitsPanelMinHeight, SplitsPanelHeaderHeight, SplitsPanelHeaderPad);
+                EnsureHeaderBar(splitsPanel.transform, splitsPanel.GetComponent<RectTransform>(), SplitsPanelHeaderColor, SplitsPanelMinWidth, SplitsPanelMinHeight, SplitsPanelHeaderHeight, SplitsPanelHeaderPad);
                 return;
             }
 
@@ -683,13 +726,13 @@ namespace EditorSpeedSplits.GUIManager
             AddInputBlocker(splitsPanel);
 
             RectTransform rt = splitsPanel.GetComponent<RectTransform>();
-            rt.anchorMin = new Vector2(0f, 0.17f);
+            rt.anchorMin = new Vector2(0f, SplitsPanelAnchorMinY);
             rt.anchorMax = new Vector2(1f, 1f);
             rt.offsetMin = Vector2.zero;
             rt.offsetMax = Vector2.zero;
 
             Image img = splitsPanel.GetComponent<Image>();
-            img.color = new Color(0f, 0f, 0f, 0.2f);
+            img.color = SplitsPanelColor;
 
             var sprite = GetRoundedButtonSprite();
             if (sprite != null)
@@ -699,7 +742,7 @@ namespace EditorSpeedSplits.GUIManager
                 img.pixelsPerUnitMultiplier = 1f;
             }
 
-            EnsureHeaderBar(splitsPanel.transform, splitsPanel.GetComponent<RectTransform>(), new Color(0.09f, 0.25f, 0.62f, 0.92f), SplitsPanelMinWidth, SplitsPanelMinHeight, SplitsPanelHeaderHeight, SplitsPanelHeaderPad);
+            EnsureHeaderBar(splitsPanel.transform, splitsPanel.GetComponent<RectTransform>(), SplitsPanelHeaderColor, SplitsPanelMinWidth, SplitsPanelMinHeight, SplitsPanelHeaderHeight, SplitsPanelHeaderPad);
 
             // --- Scroll View ---
             GameObject scrollView = new GameObject(
@@ -712,8 +755,8 @@ namespace EditorSpeedSplits.GUIManager
             RectTransform scrollRT = scrollView.GetComponent<RectTransform>();
             scrollRT.anchorMin = Vector2.zero;
             scrollRT.anchorMax = Vector2.one;
-            scrollRT.offsetMin = new Vector2(10, 10);
-            scrollRT.offsetMax = new Vector2(-10, -(SplitsPanelHeaderHeight + 2*SplitsPanelHeaderPad));
+            scrollRT.offsetMin = new Vector2(SplitsPanelScrollPadding, SplitsPanelScrollPadding);
+            scrollRT.offsetMax = new Vector2(-SplitsPanelScrollPadding, -(SplitsPanelHeaderHeight + HeaderPadMultiplier * SplitsPanelHeaderPad));
 
             ScrollRect scrollRect = scrollView.GetComponent<ScrollRect>();
             scrollRect.horizontal = false;
@@ -736,7 +779,7 @@ namespace EditorSpeedSplits.GUIManager
             viewportRT.offsetMax = Vector2.zero;
 
             Image vpImg = viewport.GetComponent<Image>();
-            vpImg.color = new Color(1, 1, 1, 0.01f);
+            vpImg.color = ViewportColor;
 
             scrollRect.viewport = viewportRT;
 
@@ -752,7 +795,7 @@ namespace EditorSpeedSplits.GUIManager
             RectTransform contentRT = content.GetComponent<RectTransform>();
             contentRT.anchorMin = new Vector2(0, 1);
             contentRT.anchorMax = new Vector2(1, 1);
-            contentRT.pivot = new Vector2(0.5f, 1f);
+            contentRT.pivot = new Vector2(DefaultPivot, FullAlpha);
             contentRT.offsetMin = Vector2.zero;
             contentRT.offsetMax = Vector2.zero;
             contentRT.anchoredPosition = Vector2.zero;
