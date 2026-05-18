@@ -167,6 +167,7 @@ namespace EditorSpeedSplits.GUIManager
                     var textSize = gui.MeasureTextSize($"{"",-splitWidth}" + $"{"",-timeWidth}" + $"{"",velocityWidth}");
                     var rectSize = textSize;
                     // Probably missing some spacing values here and there, but it looks good enough
+                    // TODO: Check the timing, I saw some bugs
                     rectSize.x += gui.Style.Layout.InnerSpacing * 2f;
                     rectSize.x += gui.Style.Scroll.Size + gui.Style.Layout.Spacing*4f;
                     rectSize.x *= 1.1f; // Add some extra width to prevent text from being too close to the edge or scrollbar

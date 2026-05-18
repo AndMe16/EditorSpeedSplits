@@ -1,8 +1,9 @@
 using EditorSpeedSplits.Splits;
 using HarmonyLib;
+using System.Collections.Generic;
 using UnityEngine;
 using ZeepSDK.LevelEditor;
-using System.Collections.Generic;
+using ZeepSDK.Messaging;
 
 namespace EditorSpeedSplits.Patches
 {
@@ -24,7 +25,13 @@ namespace EditorSpeedSplits.Patches
             ref Vector3 pointOnPlane
             )
         {
-            if (!LevelEditorApi.IsTestingLevel)
+            if (!__instance.GlobalLevel.IsTestLevel)
+                return;
+
+            if (__instance.manager.amountOfPlayers != 1)
+                return;
+
+            if (__instance.index != 0)
                 return;
 
             if (!__instance.master.countFinishCrossing)
@@ -39,20 +46,25 @@ namespace EditorSpeedSplits.Patches
             if (__instance.master.playerResults == null || __instance.master.playerResults.Count <= __instance.index)
                 return;
 
+            var result = __instance.master.playerResults[0];
+
+            if (result == null)
+                return;
+
             float timeOffset;
             float velocity;
 
             if (isFinish)
             {
-                timeOffset = __instance.master.playerResults[__instance.index].time;
+                timeOffset = result.time;
                 velocity = velocityKMH;
             }
             else
             {
-                if (__instance.master.playerResults[__instance.index].split_times == null || __instance.master.playerResults[__instance.index].split_times.Count == 0)
+                if (result.split_times == null || result.split_times.Count == 0)
                     return;
-                timeOffset = __instance.master.playerResults[__instance.index].split_times[^1].time;
-                velocity = __instance.master.playerResults[__instance.index].split_times[^1].velocity;
+                timeOffset = result.split_times[^1].time;
+                velocity = result.split_times[^1].velocity;
             }
 
             triggers.Add(theTrigger);
@@ -61,7 +73,7 @@ namespace EditorSpeedSplits.Patches
 
             Collider col = theTrigger.GetComponent<Collider>();
             if (col == null)
-                bounds = new Bounds(theTrigger.transform.position, Vector3.zero);
+                bounds = new Bounds(theTrigger.transform.position, Vector3.one);
             else
                 bounds = col.bounds;
 
@@ -89,6 +101,47 @@ namespace EditorSpeedSplits.Patches
             SplitRecorder.Add(split);
             Plugin.logger.LogInfo(
                 $"Recorded split {split.index} at time {split.time} with velocity {split.velocity} km/h isFinish: {split.isFinish}");
+
+            if ( isFinish )
+            {
+                if (__instance.master.currentLevelMode.DidWeGetMedal(
+                    LevelModeBase.MedalType.Finished, result))
+                {
+
+                    if (result.time <= 0f)
+                        return;
+
+                    string currentFullLevelName = Plugin.fullLevelName;
+
+                    if (string.IsNullOrEmpty(currentFullLevelName))
+                        return;
+
+                    if (!SplitRecorder.HasSplits(currentFullLevelName))
+                    {
+                        Plugin.ResetSplitsForCurrentLevel(false);
+                        Plugin.logger.LogInfo($"No splits file found for {currentFullLevelName}, initializing empty splits.");
+                    }
+
+                    if (ReplayManager.Instance.Replays.TryGetValue(
+                        currentFullLevelName,
+                        out ReplayManager.ReplayInfo replayInfo))
+                    {
+                        if (result.time > replayInfo.Time)
+                            return;
+                    }
+
+                    SplitRecorder.SaveBestSplits(currentFullLevelName, result.time, SplitRecorder.Splits);
+
+                    ReplayManager.Instance.AddReplay(
+                        currentFullLevelName,
+                        result.time,
+                        result.split_times
+                    );
+
+                    MessengerApi.LogSuccess("[EditorSpeedSplits] New PB! Recording Splits");
+
+                }
+            }
         }
     }
 }
