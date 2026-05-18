@@ -22,7 +22,7 @@ namespace EditorSpeedSplits.Patches
 
             Plugin.SyncEditorUIWithSplitsAvailability();
 
-            Plugin.guiManager?.RefreshSplits();
+            Plugin.Instance._guiDrawer?.RefreshSplits();
         }
     }
 }

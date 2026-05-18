@@ -34,8 +34,7 @@ namespace EditorSpeedSplits
 
         private EditorSplitsToolbarDrawer _toolbarDrawer;
 
-        internal static EditorSplitsGUIManager guiManager;
-        GameObject uiRoot;
+        public EditorSplitsGUIDrawer _guiDrawer;
 
         internal IModStorage personalBestSplitsStorage;
 
@@ -57,6 +56,9 @@ namespace EditorSpeedSplits
 
             _toolbarDrawer = new EditorSplitsToolbarDrawer();
             UIApi.AddToolbarDrawer(_toolbarDrawer);
+
+            _guiDrawer = new EditorSplitsGUIDrawer();
+            UIApi.AddZeepGUIDrawer(_guiDrawer);
 
             personalBestSplitsStorage = StorageApi.CreateModStorage(this);
 
@@ -143,7 +145,7 @@ namespace EditorSpeedSplits
 
             SplitRecorder.DeleteBestSplits(fullLevelName);
 
-            guiManager?.RefreshSplits();
+            Instance._guiDrawer.RefreshSplits();
 
             logger.LogInfo($"Splits reset for level {fullLevelName}");
             if (ShowMessage)
@@ -166,38 +168,33 @@ namespace EditorSpeedSplits
         {
             if (string.IsNullOrEmpty(fullLevelName))
             {
+                logger.LogWarning("No level loaded in the editor to sync UI for.");
                 Instance?.DestroyEditorUI();
                 return;
             }
 
             if (SplitRecorder.HasSplits(fullLevelName))
             {
+                logger.LogInfo("Splits found for current level, showing editor UI.");
                 Instance?.SetupEditorUI();
                 return;
             }
-
+            logger.LogInfo("No splits found for current level, hiding editor UI.");
             Instance?.DestroyEditorUI();
         }
 
 
         private void SetupEditorUI()
         {
-            if (guiManager != null)
-                return; // already created
-
-            uiRoot = new GameObject("EditorSplits_Manager");
-            guiManager = uiRoot.AddComponent<EditorSplitsGUIManager>();
-            guiManager.Initialize();
+            _guiDrawer._SplitsButtonOpen = true;
         }
 
         private void DestroyEditorUI()
         {
-            if (uiRoot == null)
-                return;
-
-            Destroy(uiRoot);
-            uiRoot = null;
-            guiManager = null;
+            _guiDrawer._SplitsButtonOpen = false;
+            _guiDrawer._SplitsListOpen = false;
+            _guiDrawer.isDrawingSplitsButtons = false;
+            _guiDrawer.isDrawingSplitsList = false;
         }
 
 
@@ -208,6 +205,11 @@ namespace EditorSpeedSplits
             if (!string.IsNullOrEmpty(fullLevelName))
             {
                 replay = ReplayManager.Instance.GetReplay(fullLevelName);
+                if (replay != null && !SplitRecorder.HasSplits(fullLevelName))
+                {
+                    logger.LogWarning("Replay found for current level but no splits recorded. This should not happen. Creating new splits.");
+                    SplitRecorder.CreateSplitsFromReplay(replay, fullLevelName);
+                }
             }
 
             return replay;
@@ -216,6 +218,7 @@ namespace EditorSpeedSplits
         private void OnDestroy()
         {
             UIApi.RemoveToolbarDrawer(_toolbarDrawer);
+            UIApi.RemoveZeepGUIDrawer(_guiDrawer);
             LevelEditorApi.EnteredLevelEditor -= OnEnteredLevelEditor;
             LevelEditorApi.ExitedLevelEditor -= OnExitedLevelEditor;
             RacingApi.PlayerSpawned -= OnPlayerSpawned;
