@@ -70,5 +70,37 @@ namespace EditorSpeedSplits.Splits
 
             return true;
         }
+
+        public static LevelSplits CreateSplitsFromReplay(ReplayManager.ReplayInfo replay, string fullLevelName)
+        {
+            LevelSplits levelSplits = new LevelSplits
+            {
+                levelName = fullLevelName,
+                totalTime = replay.Time,
+                splits = new List<EditorSplit>()
+            };
+            for (int i = 0; i < replay.Splits.Count; i++)
+            {
+                float splitTime = replay.Splits[i];
+                float velocity = replay.velocities != null && i < replay.velocities.Count ? replay.velocities[i] : 0f;
+                
+                EditorSplit split = new EditorSplit
+                {
+                    index = i + 1,
+                    isFinish = false,
+                    time = splitTime,
+                    velocity = velocity
+                };
+
+                levelSplits.splits.Add(split);
+            }
+
+
+            string identifier = fullLevelName.Replace(Path.DirectorySeparatorChar, '_')
+                .Replace(Path.AltDirectorySeparatorChar, '_');
+
+            Plugin.Instance.personalBestSplitsStorage.SaveToJson(identifier, levelSplits);
+            return levelSplits;
+        }
     }
 }

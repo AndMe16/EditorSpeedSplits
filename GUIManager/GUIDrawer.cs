@@ -1,8 +1,11 @@
-﻿using Imui.Controls;
+﻿using EditorSpeedSplits.Splits;
+using Imui.Controls;
 using Imui.Core;
 using Imui.Style;
 using System;
+using System.Collections.Generic;
 using UnityEngine;
+using ZeepSDK.Messaging;
 using ZeepSDK.UI;
 
 namespace EditorSpeedSplits.GUIManager
@@ -15,56 +18,121 @@ namespace EditorSpeedSplits.GUIManager
 
         public bool isDrawingSplitsButtons = false;
 
+        public bool isDrawingSplitsList = false;
+
+        public bool isHoveringSplitsButtons = false;
+
+        public bool isHoveringSplitsList = false;
+
+        private bool wasHoveringAnyWindowLastFrame = false;
+
+        List<EditorSplit> splits;
+        int selectedIndex = -1;
+
         // Constants
         const float SplitsButtonWidthPercent = 0.1f;
         const float SplitsButtonHeightRows = 2f;
+        const int splitWidth = 8;
+        const int timeWidth = 12;
+        const int velocityWidth = 8;
 
         public void OnZeepGUI(ImGui gui)
         {
-            SplitsButtons(gui);
+            var central = Plugin.central;
+            if (central != null) {
+
+                if (central.saveload.gameObject.activeSelf || central.settings.gameObject.activeSelf || central.pause.gameObject.activeSelf || central.unsavedContentPopup.gameObject.activeSelf)
+                {
+                    return;
+                }
+
+                SplitsButtons(gui);
+                SplitsList(gui);
+
+                BlockInput();
+            }
+            
+        }
+
+        private void BlockInput()
+        {
+            if (HoveringWindows())
+            {
+                if (!wasHoveringAnyWindowLastFrame)
+                {
+                    if (Plugin.central?.cam != null)
+                        Plugin.central.cam.OverrideOutsideGameView(true);
+                }
+                wasHoveringAnyWindowLastFrame = true;
+            }
+            else
+            {
+                if (wasHoveringAnyWindowLastFrame)
+                {
+                    if (Plugin.central?.cam != null)
+                        Plugin.central.cam.OverrideOutsideGameView(false);
+                }
+                wasHoveringAnyWindowLastFrame = false;
+            }
         }
 
         private void SplitsButtons(ImGui gui)
         {
            
-            ImRect rect = new ImRect(Screen.width * 0.5f - Screen.width * SplitsButtonWidthPercent * 0.5f, 0, Screen.width * SplitsButtonWidthPercent, gui.GetRowHeight() * SplitsButtonHeightRows);
+            ImRect rect = new ImRect(Screen.width * 0.4f - Screen.width * SplitsButtonWidthPercent * 0.5f, 0, Screen.width * SplitsButtonWidthPercent, gui.GetRowHeight() * SplitsButtonHeightRows);
 
-            isDrawingSplitsButtons = _SplitsButtonOpen? true : false;
+            isDrawingSplitsButtons = _SplitsButtonOpen;
 
-            if (_SplitsButtonOpen && gui.BeginWindow("com.andme.editorspeedsplits_Splits", ref _SplitsButtonOpen, rect, ImWindowFlag.NoCloseButton))
+            if (_SplitsButtonOpen && gui.BeginWindow("com.andme.editorspeedsplits_Splits", ref _SplitsButtonOpen, ref isHoveringSplitsButtons, rect, ImWindowFlag.NoCloseButton))
             {
-                
                 var columns = gui.Arena.AllocArray<ImRect>(2);
-
                 gui.GetWindowContentRect().SplitHorizontal(ref columns, columns.Length, gui.Style.Layout.Spacing);
+                SplitsButton(gui, columns);
+                ResetButton(gui, columns);
 
-                ImStyleButton splitsButtonStyle = gui.Style.Button;
-
-                splitsButtonStyle.Normal.BackColor = new Color(255f / 255f, 146f / 255f, 0f / 255f); // Orange rgb(255, 146, 0)
-                splitsButtonStyle.Hovered.BackColor = new Color(255f / 255f, 201f / 255f, 128f / 255f); // Lighter Orange rgb(255, 201, 128)
-                splitsButtonStyle.Pressed.BackColor = new Color(153f / 255f, 0f / 255f, 0f / 255f); // Darker red for pressed state rgb(153, 0, 0)
-
-                splitsButtonStyle.Normal.FrontColor = new Color(255f / 255f, 255f / 255f, 255f / 255f); // White rgb(255, 255, 255)
-                var id = gui.GetNextControlId();
-                if (gui.Button(id, "Splits", columns[0], in splitsButtonStyle, out _))
-                {
-                    // Button1 action
-                }
-
-                ImStyleButton resetButtonStyle = gui.Style.Button;
-
-                resetButtonStyle.Normal.BackColor = new Color(64f / 255f, 122f / 255f, 255f / 255f); // Blue rgb(64, 122, 255)
-                resetButtonStyle.Hovered.BackColor = new Color(128f / 255f, 166f / 255f, 255f / 255f); // Lighter Blue rgb(128, 166, 255)
-                resetButtonStyle.Pressed.BackColor = new Color(0f / 255f, 64f / 255f, 128f / 255f); // Darker blue for pressed state rgb(0, 64, 128)
-
-                resetButtonStyle.Normal.FrontColor = new Color(255f / 255f, 255f / 255f, 255f / 255f); // White rgb(255, 255, 255)
-                id = gui.GetNextControlId();
-                if (gui.Button(id, "Reset", columns[1], in resetButtonStyle, out _))
-                {
-                    // Button2 action
-                }
                 isDrawingSplitsButtons = false;
                 gui.EndWindow();
+            }
+        }
+
+        private void SplitsButton(ImGui gui, Span<ImRect> columns)
+        {
+            ImStyleButton splitsButtonStyle = gui.Style.Button;
+
+            splitsButtonStyle.Normal.BackColor = new Color(255f / 255f, 146f / 255f, 0f / 255f); // Orange rgb(255, 146, 0)
+            splitsButtonStyle.Hovered.BackColor = new Color(255f / 255f, 201f / 255f, 128f / 255f); // Lighter Orange rgb(255, 201, 128)
+            splitsButtonStyle.Pressed.BackColor = new Color(153f / 255f, 0f / 255f, 0f / 255f); // Darker red for pressed state rgb(153, 0, 0)
+
+            splitsButtonStyle.Normal.FrontColor = new Color(255f / 255f, 255f / 255f, 255f / 255f); // White rgb(255, 255, 255)
+            var id = gui.GetNextControlId();
+            if (gui.Button(id, "Splits", columns[0], in splitsButtonStyle, out _))
+            {
+                if (_SplitsListOpen)
+                {
+                    _SplitsListOpen = false;
+                }
+                else
+                {
+                    _SplitsListOpen = true;
+                    RefreshSplits();
+                }
+                
+            }
+        }
+
+        private void ResetButton(ImGui gui, Span<ImRect> columns)
+        {
+            ImStyleButton resetButtonStyle = gui.Style.Button;
+
+            resetButtonStyle.Normal.BackColor = new Color(64f / 255f, 122f / 255f, 255f / 255f); // Blue rgb(64, 122, 255)
+            resetButtonStyle.Hovered.BackColor = new Color(128f / 255f, 166f / 255f, 255f / 255f); // Lighter Blue rgb(128, 166, 255)
+            resetButtonStyle.Pressed.BackColor = new Color(0f / 255f, 64f / 255f, 128f / 255f); // Darker blue for pressed state rgb(0, 64, 128)
+
+            resetButtonStyle.Normal.FrontColor = new Color(255f / 255f, 255f / 255f, 255f / 255f); // White rgb(255, 255, 255)
+            var id = gui.GetNextControlId();
+            if (gui.Button(id, "Reset", columns[1], in resetButtonStyle, out _))
+            {
+                ResetSplits();
             }
         }
 
@@ -85,262 +153,159 @@ namespace EditorSpeedSplits.GUIManager
 
             gui.Canvas.Rect(rect, titlebarColor, radius);
             gui.Canvas.Line(border, style.Box.BorderColor, false, style.Box.BorderThickness, 0.0f);
-
-            var contentRect = rect.TakeLeft(rect.W - (gui.GetRowHeight() - gui.Style.Layout.InnerSpacing));
-            var textSettings = new ImTextSettings(gui.Style.Layout.TextSize, style.TitleBar.Alignment, overflow: style.TitleBar.Overflow);
-
-            Color titlebarTextColor = new Color(255f / 255f, 255f / 255f, 255f / 255f); // White for title text rgb(255, 255, 255)
-
-            gui.Canvas.Text("Splits", titlebarTextColor, contentRect, in textSettings);
             
         }
 
+        private void SplitsList(ImGui gui)
+        {
+            ImRect rect;
+
+            if (_SplitsListOpen)
+            {
+                if (splits != null)
+                {
+                    var textSize = gui.MeasureTextSize($"{"",-splitWidth}" + $"{"",-timeWidth}" + $"{"",velocityWidth}");
+                    var rectSize = textSize;
+                    // Probably missing some spacing values here and there, but it looks good enough
+                    rectSize.x += gui.Style.Layout.InnerSpacing * 2f;
+                    rectSize.x += gui.Style.Scroll.Size + gui.Style.Layout.Spacing*4f;
+                    rectSize.x *= 1.1f; // Add some extra width to prevent text from being too close to the edge or scrollbar
+                    rectSize.y = gui.GetRowHeight() * splits.Count + gui.Style.Layout.Spacing * (splits.Count - 1) + gui.Style.Layout.InnerSpacing * 2f;
+                    rectSize.y += gui.GetRowHeight()*2f; 
+
+                    rect = new ImRect(Screen.width * 0.4f - rectSize.x * 0.5f, gui.GetRowHeight() * SplitsButtonHeightRows, rectSize.x, rectSize.y);
+
+                }
+                else
+                {
+                    rect = new ImRect(Screen.width * 0.4f - Screen.width * 0.1f, gui.GetRowHeight() * SplitsButtonHeightRows, Screen.width * 0.2f, gui.GetRowHeight() * 3);
+                }
+
+                isDrawingSplitsList = _SplitsListOpen;
+                if (gui.BeginWindow("Splits List", ref _SplitsListOpen, ref isHoveringSplitsList, rect))
+                {
+                    if (splits == null)
+                    {
+                        gui.Text("No splits available.");
+                        isDrawingSplitsList = false;
+                        gui.EndWindow();
+                        return;
+                    }
+
+                    gui.BeginList((gui.GetLayoutWidth(), gui.GetLayoutHeight()));
+                    for (int i = 0; i < splits.Count; ++i)
+                    {
+                        var isSelected = selectedIndex == i;
+
+                        string splitLabel =
+                        $"{(splits[i].index != 0 ? $"CP{splits[i].index}" : "FIN"),-splitWidth}" +
+                        $"{FormatTime(splits[i].time),-timeWidth}" +
+                        $"{splits[i].velocity,velocityWidth:F2}";
 
 
-        //private void SavesWindow(ImGui gui)
-        //{
-        //    if (_SavesWindowOpen && gui.BeginWindow("Editor Recordings", ref _SavesWindowOpen, (500, 500)))
-        //    {
-        //        ListOfRecordings(gui);
+                        if (gui.ListItem(isSelected, splitLabel))
+                        {
+                            selectedIndex = i;
+                            OnSplitRowClicked(splits[i]);   
+                        }
+                    }
+                    gui.EndList();
+                    isDrawingSplitsList = false;
+                    gui.EndWindow();
+                }
+            }
+        }
 
-        //        RecordingInfo(gui);
-        //        gui.EndWindow();
-        //    }
-        //}
+        private string FormatTime(float seconds)
+        {
+            TimeSpan t = TimeSpan.FromSeconds(seconds);
+            return $"{t.Minutes:00}:{t.Seconds:00}.{t.Milliseconds:000}";
+        }
 
-        //private void PlaybackWindowOpen(ImGui gui)
-        //{
-        //    ImRect rect = new ImRect(0, 0, Screen.width * 0.3f, Screen.height * 0.2f);
+        internal void RefreshSplits()
+        {
+            splits = null;
+            selectedIndex = -1;
 
-        //    if (_PlaybackWindowOpen && gui.BeginWindow("Playback Controls", ref _PlaybackWindowOpen, rect, ImWindowFlag.NoCloseButton))
-        //    {
-        //        var manager = PlaybackManager.PlaybackManager.Instance;
+            string levelName = Plugin.fullLevelName;
 
-        //        gui.Separator("Playback");
+            if (string.IsNullOrEmpty(levelName))
+                return;
 
-        //        CustomSliderHeader(gui, "Time", manager._currentSessionTime);
-        //        if (gui.Slider(ref manager._currentSessionTime, 0, ((float)manager.Session.duration.TotalSeconds)))
-        //        {
-        //            manager.ScrubToTime(manager._currentSessionTime);
-        //        }
+            var replay = SplitRecorder.LoadBestSplits(levelName);
+            if (replay == null)
+                return;
 
-        //        gui.BeginHorizontal();
+            splits = replay.splits;
+            
+        }
+        
+        private void ResetSplits()
+        {
+            Plugin.ResetSplitsForCurrentLevel(true);
+            _SplitsListOpen = false;
+        }
 
-        //        var playPauseIcon = manager.IsFollowingTimeline ? "\u23F8" : "\u25B6";
+        private void OnSplitRowClicked(EditorSplit split)
+        {
+            if (split == null)
+                return;
 
-        //        if (gui.Button(playPauseIcon, size: new ImSize(gui.GetLayoutWidth() * 0.1f, gui.GetRowHeight())))
-        //        {
-        //            if (manager.IsFollowingTimeline)
-        //            {
-        //                manager.StopFollowingTimeline();
-        //            }
-        //            else
-        //            {
-        //                manager.StartFollowingTimeline();
-        //            }
-        //        }
+            if (!TryMoveEditorCamera(split.planePosition, split.planeOrientation, split.bounds))
+            {
+                Plugin.logger.LogWarning($"Could not move editor camera for split {split.index}.");
+                return;
+            }
+        }
 
-        //        gui.AddSpacing();
+        private bool TryMoveEditorCamera(Vector3 planePosition, Vector3 planeOrientation, Bounds bounds)
+        {
+            if (Plugin.central?.cam == null)
+                return false;
 
-        //        float speed = manager.SpeedMultiplier;
-        //        gui.NumericEdit(ref speed, step: 0.25f, size: new ImSize(gui.GetLayoutWidth() * 0.3f, gui.GetRowHeight()), flags: ImNumericEditFlag.PlusMinus, format: "F2", min: 0.25f, max: 50);
-        //        manager.SpeedMultiplier = speed;
+            var moveCamera = Plugin.central.cam;
+            if (moveCamera.cameraTransform == null)
+                return false;
 
-        //        gui.AddSpacing();
+            if (planePosition == Vector3.zero && planeOrientation == Vector3.zero && (bounds == null || bounds.size == Vector3.zero))
+            {
+                Plugin.logger.LogWarning("Invalid camera parameters: planePosition, planeOrientation, or bounds are zero.");
+                MessengerApi.LogWarning("[EditorSpeedSplits] Corrupted Splits File. Cannot move camera for this replay");
+                return false;
+            }
 
-        //        if (!manager.IsFollowingTimeline)
-        //        {
-        //            if (gui.Button("<", ImSizeMode.Auto))
-        //            {
-        //                manager.StepBackward();
-        //                manager.UpdateGhostFromTimeline(manager._currentSessionTime);
-        //            }
-        //            if (gui.Button(">", ImSizeMode.Auto))
-        //            {
-        //                manager.StepForward();
-        //                manager.UpdateGhostFromTimeline(manager._currentSessionTime);
-        //            }
-        //        }
+            Vector3 size;
+            if (bounds == null)
+                size = Vector3.one * 5f;
+            else
+                size = bounds.size;
 
-        //        gui.AddSpacing();
+            // ---- Dynamic Offsets ----
+            float cameraBackOffset = Mathf.Min(Mathf.Max(size.x, size.z) * 0.7f, 500);
+            float cameraHeightOffset = 5f;
 
-        //        if (gui.Checkbox(ref manager.followCamera, "Follow Camera", ImSizeMode.Auto))
-        //        {
-        //            manager.ToggledFollowCamera();
-        //        }
+            Vector3 planeDir = Vector3.ProjectOnPlane(planeOrientation, Vector3.up).normalized;
 
-        //        gui.EndHorizontal();
+            if (planeDir.sqrMagnitude < 0.001f)
+                planeDir = Vector3.forward;
 
-        //        gui.Separator("Recording");
+            Vector3 projectedOrientation = planeDir;
 
-        //        gui.BeginHorizontal();
 
-        //        var playbackRecorder = RecorderLifecycleBridge.RecorderLifecycleBridge.playbackCameraRecorder;
+            // Move camera to the plane position
+            moveCamera.transform.position = planePosition + Vector3.up * cameraHeightOffset + projectedOrientation * cameraBackOffset;
 
-        //        if (playbackRecorder != null)
-        //        {
+            // Rotate camera to look at the plane orientation
+            moveCamera.cameraTransform.LookAt(planePosition, Vector3.up);
 
-        //            if (playbackRecorder?.recording == true)
-        //            {
-        //                if (gui.Button("\u23F9", size: new ImSize(gui.GetLayoutWidth() * 0.1f, gui.GetRowHeight())))
-        //                {
-        //                    playbackRecorder.StopRecording();
-        //                }
+            moveCamera.rotationX = Mathf.DeltaAngle(0f, moveCamera.cameraTransform.eulerAngles.y);
+            moveCamera.rotationY = -Mathf.DeltaAngle(0f, moveCamera.cameraTransform.eulerAngles.x);
 
-        //            }
-        //            else
-        //            {
-        //                if (gui.Button("\u23FA", new ImSize(gui.GetLayoutWidth() * 0.1f, gui.GetRowHeight())))
-        //                {
-        //                    playbackRecorder.StartRecording();
-        //                }
-        //            }
-        //        }
-
-        //        string timeSinceStartRecordingString;
-
-        //        if (playbackRecorder.recordingTime != TimeSpan.Zero)
-        //        {
-        //            timeSinceStartRecordingString = playbackRecorder.recordingTime.ToString(@"hh\:mm\:ss");
-        //        }
-        //        else
-        //        {
-        //            timeSinceStartRecordingString = "--:--:--";
-        //        }
-
-        //        gui.TextEditNonEditable(timeSinceStartRecordingString, size: new ImSize(gui.GetLayoutWidth() * 0.2f, gui.GetRowHeight()));
-
-        //        gui.EndHorizontal();
-
-        //        gui.EndWindow();
-        //    }
-        //}
-
-        //private void ListOfRecordings(ImGui gui)
-        //{
-        //    gui.Separator("List of recordings");
-
-        //    gui.BeginList((gui.GetLayoutWidth(), ImList.GetEnclosingHeight(gui, gui.GetRowsHeightWithSpacing(5))));
-
-        //    for (int i = 0; i < values.Length; ++i)
-        //    {
-
-        //        if (gui.ListItem(ref _selectedIndex, i, values[i]))
-        //        {
-        //            selectedRecording = values[i];
-        //            var session = FilesManager.FilesManager.LoadRecordingSession(Plugin.Storage, selectedRecording);
-        //            if (session != null)
-        //                info = $"Name: {selectedRecording}\n" +
-        //                      $"Date: {session.savingTime:G}\n" +
-        //                      $"Duration: {session.duration:hh':'mm':'ss}\n" +
-        //                      $"Actions recorded: {session.eventCount}";
-
-        //        }
-        //    }
-
-        //    gui.EndList();
-
-        //}
-
-        //private void RecordingInfo(ImGui gui)
-        //{
-        //    gui.Separator("Recording info");
-
-        //    if (selectedRecording != null)
-        //    {
-        //        if (info != null)
-        //        {
-        //            gui.TextEditNonEditable(info, (gui.GetLayoutWidth(), gui.GetTextLineHeight() * 4.5f), true);
-        //        }
-        //        else
-        //        {
-        //            gui.TextEditNonEditable("Failed to load recording session.", (gui.GetLayoutWidth(), gui.GetTextLineHeight() * 1.5f), true);
-        //        }
-
-        //        gui.AddSpacing();
-
-        //        gui.BeginHorizontal();
-        //        if (gui.Button("Open", ImSizeMode.Auto))
-        //        {
-        //            Plugin.logger.LogInfo($"[GUIDrawer] Opening recording {selectedRecording}");
-        //            RecorderLifecycleBridge.RecorderLifecycleBridge.OpenPlaybackScene(selectedRecording);
-        //        }
-
-        //        gui.AddSpacing();
-
-        //        if (gui.Button("Delete", ImSizeMode.Auto))
-        //        {
-        //            Plugin.logger.LogInfo($"[GUIDrawer] Deleting recording {selectedRecording}");
-        //            FilesManager.FilesManager.DeleteRecordingSession(Plugin.Storage, selectedRecording);
-        //            RefreshUI();
-        //        }
-
-        //        gui.EndHorizontal();
-        //    }
-        //}
-
-        //private void RefreshFiles()
-        //{
-        //    values = FilesManager.FilesManager.GetAllRecordingSessions(Plugin.Storage);
-        //}
-
-        //public void OpenSavesWindow()
-        //{
-        //    RefreshUI();
-        //    _SavesWindowOpen = true;
-        //}
-
-        //public void OpenPlaybackWindow()
-        //{
-        //    _PlaybackWindowOpen = true;
-        //}
-
-        //public void ClosePlaybackWindow()
-        //{
-        //    _PlaybackWindowOpen = false;
-        //}
-
-        //public void RefreshUI()
-        //{
-        //    RefreshFiles();
-        //    selectedRecording = null;
-        //    _selectedIndex = -1;
-        //}
-
-        //public void CustomSliderHeader(ImGui gui,
-        //                                ReadOnlySpan<char> label,
-        //                                float value)
-        //{
-        //    gui.AddSpacingIfLayoutFrameNotEmpty();
-        //    gui.BeginHorizontal();
-
-        //    var rowHeight = gui.GetRowHeight();
-        //    var height = rowHeight * gui.Style.Slider.HeaderScale;
-        //    var rect = gui.AddLayoutRect(gui.GetLayoutWidth(), height);
-        //    var barHeight = gui.Style.Slider.BarThickness * rowHeight;
-        //    var padding = (rowHeight - barHeight) * 0.5f;
-        //    var fontSize = gui.TextDrawer.GetFontSizeFromLineHeight(height);
-
-        //    // (artem-s): align with slider's bar
-        //    rect.X += padding;
-        //    rect.W -= padding * 2;
-
-        //    // (artem-s): shift rect down by spacing value so there is no gap between header and slider itself
-        //    rect.Y -= gui.Style.Layout.Spacing;
-
-        //    var textSettings = new ImTextSettings(fontSize, 0.0f, 1.0f, overflow: ImTextOverflow.Ellipsis);
-        //    gui.Text(label, textSettings, rect);
-
-        //    var time = TimeSpan.FromSeconds(value);
-
-        //    string valueFormatted = value % 1 == 0
-        //        ? time.ToString(@"hh\:mm\:ss")
-        //        : time.ToString(@"hh\:mm\:ss\.f");
-        //    textSettings.Align.X = 1.0f;
-        //    gui.Text(valueFormatted, textSettings, rect);
-
-        //    gui.EndHorizontal();
-        //}
-
+            return true;
+        }
+        public bool HoveringWindows()
+        {
+            return (isHoveringSplitsButtons && _SplitsButtonOpen) || (isHoveringSplitsList && _SplitsListOpen);
+        }
     }
 }

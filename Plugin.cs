@@ -36,9 +36,6 @@ namespace EditorSpeedSplits
 
         public EditorSplitsGUIDrawer _guiDrawer;
 
-        internal static EditorSplitsGUIManager guiManager;
-        GameObject uiRoot;
-
         internal IModStorage personalBestSplitsStorage;
 
         private void Awake()
@@ -148,7 +145,7 @@ namespace EditorSpeedSplits
 
             SplitRecorder.DeleteBestSplits(fullLevelName);
 
-            guiManager?.RefreshSplits();
+            Instance._guiDrawer.RefreshSplits();
 
             logger.LogInfo($"Splits reset for level {fullLevelName}");
             if (ShowMessage)
@@ -171,40 +168,33 @@ namespace EditorSpeedSplits
         {
             if (string.IsNullOrEmpty(fullLevelName))
             {
+                logger.LogWarning("No level loaded in the editor to sync UI for.");
                 Instance?.DestroyEditorUI();
                 return;
             }
 
             if (SplitRecorder.HasSplits(fullLevelName))
             {
+                logger.LogInfo("Splits found for current level, showing editor UI.");
                 Instance?.SetupEditorUI();
                 return;
             }
-
+            logger.LogInfo("No splits found for current level, hiding editor UI.");
             Instance?.DestroyEditorUI();
         }
 
 
         private void SetupEditorUI()
         {
-            if (guiManager != null)
-                return; // already created
-
             _guiDrawer._SplitsButtonOpen = true;
-
-            uiRoot = new GameObject("EditorSplits_Manager");
-            guiManager = uiRoot.AddComponent<EditorSplitsGUIManager>();
-            guiManager.Initialize();
         }
 
         private void DestroyEditorUI()
         {
-            if (uiRoot == null)
-                return;
-
-            Destroy(uiRoot);
-            uiRoot = null;
-            guiManager = null;
+            _guiDrawer._SplitsButtonOpen = false;
+            _guiDrawer._SplitsListOpen = false;
+            _guiDrawer.isDrawingSplitsButtons = false;
+            _guiDrawer.isDrawingSplitsList = false;
         }
 
 
@@ -215,6 +205,11 @@ namespace EditorSpeedSplits
             if (!string.IsNullOrEmpty(fullLevelName))
             {
                 replay = ReplayManager.Instance.GetReplay(fullLevelName);
+                if (replay != null && !SplitRecorder.HasSplits(fullLevelName))
+                {
+                    logger.LogWarning("Replay found for current level but no splits recorded. This should not happen. Creating new splits.");
+                    SplitRecorder.CreateSplitsFromReplay(replay, fullLevelName);
+                }
             }
 
             return replay;
