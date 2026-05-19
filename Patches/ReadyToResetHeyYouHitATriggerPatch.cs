@@ -123,8 +123,9 @@ namespace EditorSpeedSplits.Patches
                     Plugin.logger.LogInfo($"No splits file found Recording Splits");
                 }
 
-                // If we already have completed splits and the new time is not better, or we got less CPs, we don't save the splits
-                else if (SplitRecorder.previousLevelSplits != null && SplitRecorder.previousLevelSplits?.completed == true && SplitRecorder.previousLevelSplits?.totalTime <= result.time && SplitRecorder.previousLevelSplits?.gotCPs >= result.racepoints)
+                // If we already have completed splits and the new time is not better
+                // We save if the # CPs is different
+                else if (SplitRecorder.previousLevelSplits != null && SplitRecorder.previousLevelSplits?.completed == true && SplitRecorder.previousLevelSplits?.totalTime <= result.time && SplitRecorder.previousLevelSplits?.gotCPs == result.racepoints)
                 {
                     Plugin.logger.LogInfo($"Finished level but did not beat previous best time {SplitRecorder.previousLevelSplits?.totalTime} vs {result.time} or got less CPs {SplitRecorder.previousLevelSplits?.gotCPs} vs {result.racepoints}, not saving splits.");
                     return;

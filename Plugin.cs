@@ -55,13 +55,16 @@ namespace EditorSpeedSplits
             LevelEditorApi.ExitedLevelEditor += OnExitedLevelEditor;
             RacingApi.PlayerSpawned += OnPlayerSpawned;
 
+            personalBestSplitsStorage = StorageApi.CreateModStorage(this);
+
             _toolbarDrawer = new EditorSplitsToolbarDrawer();
             UIApi.AddToolbarDrawer(_toolbarDrawer);
 
             _guiDrawer = new EditorSplitsGUIDrawer();
             UIApi.AddZeepGUIDrawer(_guiDrawer);
 
-            personalBestSplitsStorage = StorageApi.CreateModStorage(this);
+            _guiDrawer.LoadWindowsRects();
+
 
         }
 
@@ -233,6 +236,8 @@ namespace EditorSpeedSplits
 
         private void OnDestroy()
         {
+            Instance._guiDrawer.SaveWindowsRects();
+
             UIApi.RemoveToolbarDrawer(_toolbarDrawer);
             UIApi.RemoveZeepGUIDrawer(_guiDrawer);
             LevelEditorApi.EnteredLevelEditor -= OnEnteredLevelEditor;

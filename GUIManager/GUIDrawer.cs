@@ -26,6 +26,15 @@ namespace EditorSpeedSplits.GUIManager
 
         private bool wasHoveringAnyWindowLastFrame = false;
 
+        private bool shouldUpdateSize = false;
+
+        private WindowRects windowRects = new();
+
+        private WindowRects loadedWindowRects = new();
+
+        private bool loadRectsButtons = false;
+        private bool loadRectsList = false;
+
         List<EditorSplit> splits;
         int selectedIndex = -1;
 
@@ -39,7 +48,8 @@ namespace EditorSpeedSplits.GUIManager
         public void OnZeepGUI(ImGui gui)
         {
             var central = Plugin.central;
-            if (central != null) {
+            if (central != null)
+            {
 
                 if (central.saveload.gameObject.activeSelf || central.settings.gameObject.activeSelf || central.pause.gameObject.activeSelf || central.unsavedContentPopup.gameObject.activeSelf)
                 {
@@ -51,48 +61,40 @@ namespace EditorSpeedSplits.GUIManager
 
                 BlockInput();
             }
-            
-        }
 
-        private void BlockInput()
-        {
-            if (HoveringWindows())
-            {
-                if (!wasHoveringAnyWindowLastFrame)
-                {
-                    if (Plugin.central?.cam != null)
-                        Plugin.central.cam.OverrideOutsideGameView(true);
-                }
-                wasHoveringAnyWindowLastFrame = true;
-            }
-            else
-            {
-                if (wasHoveringAnyWindowLastFrame)
-                {
-                    if (Plugin.central?.cam != null)
-                        Plugin.central.cam.OverrideOutsideGameView(false);
-                }
-                wasHoveringAnyWindowLastFrame = false;
-            }
         }
 
         private void SplitsButtons(ImGui gui)
         {
-           
-            ImRect rect = new ImRect(Screen.width * 0.4f - Screen.width * SplitsButtonWidthPercent * 0.5f, 0, Screen.width * SplitsButtonWidthPercent, gui.GetRowHeight() * SplitsButtonHeightRows);
-
-            isDrawingSplitsButtons = _SplitsButtonOpen;
-
-            if (_SplitsButtonOpen && gui.BeginWindow("com.andme.editorspeedsplits_Splits", ref _SplitsButtonOpen, ref isHoveringSplitsButtons, rect, ImWindowFlag.NoCloseButton))
+            if (_SplitsButtonOpen)
             {
-                var columns = gui.Arena.AllocArray<ImRect>(2);
-                gui.GetWindowContentRect().SplitHorizontal(ref columns, columns.Length, gui.Style.Layout.Spacing);
-                SplitsButton(gui, columns);
-                ResetButton(gui, columns);
-                gui.EndWindow();
-            }
-            isDrawingSplitsButtons = false;
+                ImRect rect;
+                if (loadRectsButtons && loadedWindowRects.ButtonsWindow != null)
+                {
+                    loadRectsButtons = false;
+                    rect = loadedWindowRects.ButtonsWindow;
+                    Plugin.logger.LogInfo($"Loaded splits buttons window rect");
+                }
+                else
+                {
+                    rect = new ImRect(Screen.width * 0.4f - Screen.width * SplitsButtonWidthPercent * 0.5f, 0, Screen.width * SplitsButtonWidthPercent, gui.GetRowHeight() * SplitsButtonHeightRows);
+                }
 
+                isDrawingSplitsButtons = true;
+
+                if (gui.BeginWindow("com.andme.editorspeedsplits_Splits", ref _SplitsButtonOpen, ref isHoveringSplitsButtons, rect, ImWindowFlag.NoCloseButton))
+                {
+                    ref var windowState = ref gui.WindowManager.GetWindowState(gui.PeekId());
+                    windowRects.ButtonsWindow = windowState.Rect;
+
+                    var columns = gui.Arena.AllocArray<ImRect>(2);
+                    gui.GetWindowContentRect().SplitHorizontal(ref columns, columns.Length, gui.Style.Layout.Spacing);
+                    SplitsButton(gui, columns);
+                    ResetButton(gui, columns);
+                    gui.EndWindow();
+                }
+                isDrawingSplitsButtons = false;
+            }
         }
 
         private void SplitsButton(ImGui gui, Span<ImRect> columns)
@@ -116,7 +118,7 @@ namespace EditorSpeedSplits.GUIManager
                     _SplitsListOpen = true;
                     RefreshSplits();
                 }
-                
+
             }
         }
 
@@ -138,9 +140,9 @@ namespace EditorSpeedSplits.GUIManager
 
         internal static void MyDrawTitleBar(ImGui gui, ImRect rect, ReadOnlySpan<char> text)
         {
-            
+
             ref readonly var style = ref gui.Style.Window;
-            
+
 
             var radiusTopLeft = style.Box.BorderRadius.TopLeft - style.Box.BorderThickness;
             var radiusTopRight = style.Box.BorderRadius.TopRight - style.Box.BorderThickness;
@@ -153,7 +155,7 @@ namespace EditorSpeedSplits.GUIManager
 
             gui.Canvas.Rect(rect, titlebarColor, radius);
             gui.Canvas.Line(border, style.Box.BorderColor, false, style.Box.BorderThickness, 0.0f);
-            
+
         }
 
         private void SplitsList(ImGui gui)
@@ -169,10 +171,10 @@ namespace EditorSpeedSplits.GUIManager
                     // Probably missing some spacing values here and there, but it looks good enough
                     // TODO: Check the timing, I saw some bugs
                     rectSize.x += gui.Style.Layout.InnerSpacing * 2f;
-                    rectSize.x += gui.Style.Scroll.Size + gui.Style.Layout.Spacing*4f;
+                    rectSize.x += gui.Style.Scroll.Size + gui.Style.Layout.Spacing * 4f;
                     rectSize.x *= 1.1f; // Add some extra width to prevent text from being too close to the edge or scrollbar
                     rectSize.y = gui.GetRowHeight() * splits.Count + gui.Style.Layout.Spacing * (splits.Count - 1) + gui.Style.Layout.InnerSpacing * 2f;
-                    rectSize.y += gui.GetRowHeight()*2f; 
+                    rectSize.y += gui.GetRowHeight() * 2f;
 
                     rect = new ImRect(Screen.width * 0.4f - rectSize.x * 0.5f, gui.GetRowHeight() * SplitsButtonHeightRows, rectSize.x, rectSize.y);
 
@@ -182,9 +184,23 @@ namespace EditorSpeedSplits.GUIManager
                     rect = new ImRect(Screen.width * 0.4f - Screen.width * 0.1f, gui.GetRowHeight() * SplitsButtonHeightRows, Screen.width * 0.2f, gui.GetRowHeight() * 3);
                 }
 
-                isDrawingSplitsList = _SplitsListOpen;
+                if (loadRectsList && loadedWindowRects.SplitsWindow != null)
+                {
+                    loadRectsList = false;
+                    rect.Position = loadedWindowRects.SplitsWindow.Position;
+                    Plugin.logger.LogInfo($"Loaded splits list window rect");
+                }
+
+                isDrawingSplitsList = true;
                 if (gui.BeginWindow("Splits List", ref _SplitsListOpen, ref isHoveringSplitsList, rect))
                 {
+                    ref var windowState = ref gui.WindowManager.GetWindowState(gui.PeekId());
+                    windowRects.SplitsWindow = windowState.Rect;
+                    if (shouldUpdateSize)
+                    {
+                        windowState.Rect.Size = rect.Size;
+                    }
+
                     if (splits == null)
                     {
                         gui.Text("No splits available.");
@@ -207,7 +223,7 @@ namespace EditorSpeedSplits.GUIManager
                         if (gui.ListItem(isSelected, splitLabel))
                         {
                             selectedIndex = i;
-                            OnSplitRowClicked(splits[i]);   
+                            OnSplitRowClicked(splits[i]);
                         }
                     }
                     gui.EndList();
@@ -215,6 +231,9 @@ namespace EditorSpeedSplits.GUIManager
                 }
                 isDrawingSplitsList = false;
             }
+
+            shouldUpdateSize = false;
+
         }
 
         private string FormatTime(float seconds)
@@ -238,9 +257,10 @@ namespace EditorSpeedSplits.GUIManager
                 return;
 
             splits = replay.splits;
-            
+
+            shouldUpdateSize = true;
         }
-        
+
         private void ResetSplits()
         {
             Plugin.ResetSplitsForCurrentLevel(true);
@@ -307,6 +327,43 @@ namespace EditorSpeedSplits.GUIManager
         public bool HoveringWindows()
         {
             return (isHoveringSplitsButtons && _SplitsButtonOpen) || (isHoveringSplitsList && _SplitsListOpen);
+        }
+
+        private void BlockInput()
+        {
+            if (HoveringWindows())
+            {
+                if (!wasHoveringAnyWindowLastFrame)
+                {
+                    if (Plugin.central?.cam != null)
+                        Plugin.central.cam.OverrideOutsideGameView(true);
+                }
+                wasHoveringAnyWindowLastFrame = true;
+            }
+            else
+            {
+                if (wasHoveringAnyWindowLastFrame)
+                {
+                    if (Plugin.central?.cam != null)
+                        Plugin.central.cam.OverrideOutsideGameView(false);
+                }
+                wasHoveringAnyWindowLastFrame = false;
+            }
+        }
+
+        public void SaveWindowsRects()
+        {
+            Plugin.Instance.personalBestSplitsStorage.SaveToJson("SplitsWindowRects", windowRects);
+        }
+
+        public void LoadWindowsRects()
+        {
+            if (Plugin.Instance.personalBestSplitsStorage.JsonFileExists("SplitsWindowRects"))
+            {
+                loadedWindowRects = Plugin.Instance.personalBestSplitsStorage.LoadFromJson<WindowRects>("SplitsWindowRects");
+                loadRectsButtons = true;
+                loadRectsList = true;
+            }
         }
     }
 }
