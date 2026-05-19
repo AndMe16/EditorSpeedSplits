@@ -77,6 +77,9 @@ namespace EditorSpeedSplits.Splits
 
         public static LevelSplits CreateSplitsFromReplay(ReplayManager.ReplayInfo replay, string fullLevelName)
         {
+            if (replay == null || replay.Splits == null)
+                return null;
+
             LevelSplits levelSplits = new LevelSplits
             {
                 levelName = fullLevelName,

@@ -89,10 +89,10 @@ namespace EditorSpeedSplits.GUIManager
                 gui.GetWindowContentRect().SplitHorizontal(ref columns, columns.Length, gui.Style.Layout.Spacing);
                 SplitsButton(gui, columns);
                 ResetButton(gui, columns);
-
-                isDrawingSplitsButtons = false;
                 gui.EndWindow();
             }
+            isDrawingSplitsButtons = false;
+
         }
 
         private void SplitsButton(ImGui gui, Span<ImRect> columns)
@@ -211,9 +211,9 @@ namespace EditorSpeedSplits.GUIManager
                         }
                     }
                     gui.EndList();
-                    isDrawingSplitsList = false;
                     gui.EndWindow();
                 }
+                isDrawingSplitsList = false;
             }
         }
 
