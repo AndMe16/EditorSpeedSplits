@@ -17,12 +17,16 @@ namespace EditorSpeedSplits.Splits
             Splits.Add(split);
         }
 
-        public static void SaveBestSplits(string levelName, float bestTime, List<EditorSplit> bestSplits)
+        public static void SaveBestSplits(string levelName, float bestTime, List<EditorSplit> bestSplits, bool completed, int gotCPs, int totalCPs, bool fromReplay)
         {
             LevelSplits levelSplits = new LevelSplits
             {
                 levelName = levelName,
                 totalTime = bestTime,
+                completed = completed,
+                gotCPs = gotCPs,
+                totalCPs = totalCPs,
+                fromReplay = fromReplay,
                 splits = new List<EditorSplit>(bestSplits)
             };
 
@@ -77,7 +81,11 @@ namespace EditorSpeedSplits.Splits
             {
                 levelName = fullLevelName,
                 totalTime = replay.Time,
-                splits = new List<EditorSplit>()
+                splits = new List<EditorSplit>(),
+                completed = true,
+                gotCPs = replay.Splits.Count,
+                totalCPs = replay.Splits.Count,
+                fromReplay = true
             };
             for (int i = 0; i < replay.Splits.Count; i++)
             {

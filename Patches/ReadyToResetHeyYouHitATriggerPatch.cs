@@ -102,46 +102,91 @@ namespace EditorSpeedSplits.Patches
             Plugin.logger.LogInfo(
                 $"Recorded split {split.index} at time {split.time} with velocity {split.velocity} km/h isFinish: {split.isFinish}");
 
-            if ( isFinish )
+            string currentFullLevelName = Plugin.fullLevelName;
+
+            if (string.IsNullOrEmpty(currentFullLevelName))
+                return;
+
+            var previousBestSplits = SplitRecorder.LoadBestSplits(currentFullLevelName);
+
+            if (isFinish)
             {
-                if (__instance.master.currentLevelMode.DidWeGetMedal(
+                if (!__instance.master.currentLevelMode.DidWeGetMedal(
                     LevelModeBase.MedalType.Finished, result))
                 {
+                    Plugin.logger.LogInfo($"Finished level but did not get medal, not saving splits.");
+                    return;
+                }
+                
+                if (result.time <= 0f)
+                    return;
 
-                    if (result.time <= 0f)
-                        return;
+                if (previousBestSplits == null)
+                {
+                    Plugin.ResetSplitsForCurrentLevel(false);
+                    Plugin.logger.LogInfo($"No splits file found for {currentFullLevelName}, initializing empty splits.");
+                }
 
-                    string currentFullLevelName = Plugin.fullLevelName;
+                if (previousBestSplits != null && previousBestSplits?.completed == true && previousBestSplits?.totalTime <= result.time && previousBestSplits?.gotCPs >= result.racepoints && previousBestSplits?.fromReplay == false)
+                {
+                    Plugin.logger.LogInfo($"Finished level but did not beat previous best time or got less CPs, not saving splits.");
+                    return;
+                }
 
-                    if (string.IsNullOrEmpty(currentFullLevelName))
-                        return;
+                SplitRecorder.SaveBestSplits(currentFullLevelName, result.time, SplitRecorder.Splits, true, result.racepoints, __instance.master.racePoints, false);
 
-                    if (!SplitRecorder.HasSplits(currentFullLevelName))
+                ReplayManager.Instance.Replays.Remove(currentFullLevelName);
+
+                ReplayManager.Instance.AddReplay(
+                    currentFullLevelName,
+                    result.time,
+                    result.split_times
+                );
+
+                MessengerApi.LogSuccess("[EditorSpeedSplits] New PB! Recording Splits");
+
+            }
+            else
+            {
+                Plugin.logger.LogInfo(
+                    $"Checkpoint passed. CP{result.racepoints}/{__instance.master.racePoints}");
+
+                if (result.split_times[^1].time <= 0f)
+                    return;
+
+                if (previousBestSplits != null)
+                {
+                    if ((!previousBestSplits.completed || previousBestSplits.fromReplay) && (result.racepoints > previousBestSplits.gotCPs || (result.racepoints == previousBestSplits.gotCPs && result.split_times[^1].time < previousBestSplits.totalTime)))
                     {
-                        Plugin.ResetSplitsForCurrentLevel(false);
-                        Plugin.logger.LogInfo($"No splits file found for {currentFullLevelName}, initializing empty splits.");
-                    }
+                        SplitRecorder.SaveBestSplits(currentFullLevelName, result.split_times[^1].time, SplitRecorder.Splits, false, result.racepoints, __instance.master.racePoints, false);
 
-                    if (ReplayManager.Instance.Replays.TryGetValue(
-                        currentFullLevelName,
-                        out ReplayManager.ReplayInfo replayInfo))
-                    {
-                        if (result.time > replayInfo.Time)
-                            return;
-                    }
+                        ReplayManager.Instance.Replays.Remove(currentFullLevelName);
 
-                    SplitRecorder.SaveBestSplits(currentFullLevelName, result.time, SplitRecorder.Splits);
+                        ReplayManager.Instance.AddReplay(
+                            currentFullLevelName,
+                            result.split_times[^1].time,
+                            result.split_times
+                        );
+
+                        MessengerApi.Log("[EditorSpeedSplits] New CP PB");
+                    }
+                }
+                else
+                {
+                    Plugin.ResetSplitsForCurrentLevel(false);
+
+                    SplitRecorder.SaveBestSplits(currentFullLevelName, result.split_times[^1].time, SplitRecorder.Splits, false, result.racepoints, __instance.master.racePoints, false);
+                    
+                    ReplayManager.Instance.Replays.Remove(currentFullLevelName);
 
                     ReplayManager.Instance.AddReplay(
                         currentFullLevelName,
                         result.time,
                         result.split_times
                     );
-
-                    MessengerApi.LogSuccess("[EditorSpeedSplits] New PB! Recording Splits");
-
+                    MessengerApi.Log("[EditorSpeedSplits] New CP PB");
                 }
-            }
+            }        
         }
     }
 }
