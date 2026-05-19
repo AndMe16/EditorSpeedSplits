@@ -2,8 +2,6 @@ using EditorSpeedSplits.Splits;
 using EditorSpeedSplits.Utilities;
 using HarmonyLib;
 using System.IO;
-using ZeepSDK.LevelEditor;
-using ZeepSDK.Racing;
 
 namespace EditorSpeedSplits.Patches
 {
@@ -21,21 +19,10 @@ namespace EditorSpeedSplits.Patches
                     __instance.GetFolderWeJustSavedInto().FullName,
                     __instance.fileName.text));
 
-            var currentReplay = Plugin.GetReplaySplits();
+            var bestSplits = SplitRecorder.LoadBestSplits(Plugin.fullLevelName);
 
-            if (currentReplay != null)
-            {
-                ReplayManager.Instance.AddReplay(
-                    newFullLevelName,
-                    currentReplay.Time,
-                    WinCompare.CreateSplitTimeList(
-                        currentReplay?.Splits,
-                        currentReplay?.velocities));
-
-                var bestSplits = SplitRecorder.LoadBestSplits(Plugin.fullLevelName);
-
-                SplitRecorder.SaveBestSplits(newFullLevelName, bestSplits.totalTime, bestSplits.splits, bestSplits.completed, bestSplits.gotCPs, bestSplits.totalCPs, bestSplits.fromReplay);
-            }
+            if (bestSplits != null)
+                SplitRecorder.SaveBestSplits(newFullLevelName, bestSplits.totalTime, bestSplits.splits, bestSplits.completed, bestSplits.gotCPs, bestSplits.totalCPs);
 
             Plugin.fullLevelName = newFullLevelName;
         }

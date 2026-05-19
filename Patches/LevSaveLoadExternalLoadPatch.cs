@@ -1,5 +1,7 @@
+using EditorSpeedSplits.Splits;
 using EditorSpeedSplits.Utilities;
 using HarmonyLib;
+using System.Collections.Generic;
 using System.IO;
 using ZeepSDK.LevelEditor;
 

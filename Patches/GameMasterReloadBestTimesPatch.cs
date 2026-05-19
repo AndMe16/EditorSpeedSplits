@@ -15,7 +15,6 @@ namespace EditorSpeedSplits.Patches
             ReplayManager.ReplayInfo replay = Plugin.GetReplaySplits();
 
 
-
             if (replay == null)
             {
                 __instance.SetupPersonalBestAndMedals(0f, []);

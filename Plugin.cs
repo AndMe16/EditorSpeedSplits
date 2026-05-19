@@ -6,6 +6,7 @@ using EditorSpeedSplits.Patches;
 using EditorSpeedSplits.Splits;
 using EditorSpeedSplits.UI;
 using HarmonyLib;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -92,7 +93,6 @@ namespace EditorSpeedSplits
             if (string.IsNullOrEmpty(fullLevelName))
             {
                 fullLevelName = defaultName;
-                ReplayManager.Instance.Replays.Remove(fullLevelName);
                 SplitRecorder.DeleteBestSplits(fullLevelName);
 
             }
@@ -136,8 +136,6 @@ namespace EditorSpeedSplits
                 MessengerApi.LogWarning("[EditorSpeedSplits] No level loaded to reset splits for");
                 return;
             }
-
-            ReplayManager.Instance.Replays.Remove(fullLevelName);
 
             GameMaster gameMaster = FindObjectOfType<GameMaster>();
 
@@ -204,11 +202,29 @@ namespace EditorSpeedSplits
 
             if (!string.IsNullOrEmpty(fullLevelName))
             {
-                replay = ReplayManager.Instance.GetReplay(fullLevelName);
-                if (replay != null && !SplitRecorder.HasSplits(fullLevelName))
+                if (SplitRecorder.HasSplits(fullLevelName))
                 {
-                    logger.LogWarning("Replay found for current level but no splits recorded. This should not happen. Creating new splits.");
-                    SplitRecorder.CreateSplitsFromReplay(replay, fullLevelName);
+                    var bestSplits = SplitRecorder.LoadBestSplits(fullLevelName);
+                    List<float> splitTimes = [];
+                    List<float> splitVelocities = [];
+                    for (int i = 0; i < bestSplits.splits.Count; i++)
+                    {
+                        splitTimes.Add(bestSplits.splits[i].time);
+                        splitVelocities.Add(bestSplits.splits[i].velocity);
+                    }
+                    replay = new ReplayManager.ReplayInfo
+                    {
+                        LevelUID = bestSplits.levelName,
+                        Time = bestSplits.totalTime,
+                        Splits = splitTimes,
+                        velocities = splitVelocities
+                    };
+
+                    SplitRecorder.previousLevelSplits = bestSplits;
+                }
+                else
+                {
+                    SplitRecorder.previousLevelSplits = null;
                 }
             }
 

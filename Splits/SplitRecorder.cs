@@ -7,6 +7,8 @@ namespace EditorSpeedSplits.Splits
     {
         public static readonly List<EditorSplit> Splits = new();
 
+        public static LevelSplits previousLevelSplits;
+
         public static void Clear()
         {
             Splits.Clear();
@@ -17,7 +19,7 @@ namespace EditorSpeedSplits.Splits
             Splits.Add(split);
         }
 
-        public static void SaveBestSplits(string levelName, float bestTime, List<EditorSplit> bestSplits, bool completed, int gotCPs, int totalCPs, bool fromReplay)
+        public static void SaveBestSplits(string levelName, float bestTime, List<EditorSplit> bestSplits, bool completed, int gotCPs, int totalCPs)
         {
             LevelSplits levelSplits = new LevelSplits
             {
@@ -26,7 +28,6 @@ namespace EditorSpeedSplits.Splits
                 completed = completed,
                 gotCPs = gotCPs,
                 totalCPs = totalCPs,
-                fromReplay = fromReplay,
                 splits = new List<EditorSplit>(bestSplits)
             };
 
@@ -73,45 +74,6 @@ namespace EditorSpeedSplits.Splits
             Plugin.logger.LogInfo($"Best splits for level {levelName} exist in storage.");
 
             return true;
-        }
-
-        public static LevelSplits CreateSplitsFromReplay(ReplayManager.ReplayInfo replay, string fullLevelName)
-        {
-            if (replay == null || replay.Splits == null)
-                return null;
-
-            LevelSplits levelSplits = new LevelSplits
-            {
-                levelName = fullLevelName,
-                totalTime = replay.Time,
-                splits = new List<EditorSplit>(),
-                completed = true,
-                gotCPs = replay.Splits.Count,
-                totalCPs = replay.Splits.Count,
-                fromReplay = true
-            };
-            for (int i = 0; i < replay.Splits.Count; i++)
-            {
-                float splitTime = replay.Splits[i];
-                float velocity = replay.velocities != null && i < replay.velocities.Count ? replay.velocities[i] : 0f;
-                
-                EditorSplit split = new EditorSplit
-                {
-                    index = i + 1,
-                    isFinish = false,
-                    time = splitTime,
-                    velocity = velocity
-                };
-
-                levelSplits.splits.Add(split);
-            }
-
-
-            string identifier = fullLevelName.Replace(Path.DirectorySeparatorChar, '_')
-                .Replace(Path.AltDirectorySeparatorChar, '_');
-
-            Plugin.Instance.personalBestSplitsStorage.SaveToJson(identifier, levelSplits);
-            return levelSplits;
         }
     }
 }

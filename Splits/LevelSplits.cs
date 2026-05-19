@@ -14,8 +14,6 @@ namespace EditorSpeedSplits.Splits
 
         public int totalCPs = 1000;
 
-        public bool fromReplay = false;
-
         public List<EditorSplit> splits;
     }
 }
