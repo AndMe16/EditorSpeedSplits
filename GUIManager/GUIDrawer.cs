@@ -151,7 +151,7 @@ namespace EditorSpeedSplits.GUIManager
             Span<Vector2> border = stackalloc Vector2[2] { rect.BottomLeft, rect.BottomRight };
 
             // Changed colors to match the splits button style
-            Color titlebarColor = new Color(87f / 255f, 87f / 255f, 87f / 255f); // Dark gray for title bar background rgb(87, 87, 87)
+            Color titlebarColor = new(87f / 255f, 87f / 255f, 87f / 255f); // Dark gray for title bar background rgb(87, 87, 87)
 
             gui.Canvas.Rect(rect, titlebarColor, radius);
             gui.Canvas.Line(border, style.Box.BorderColor, false, style.Box.BorderThickness, 0.0f);

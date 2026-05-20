@@ -10,10 +10,8 @@ namespace EditorSpeedSplits.Splits
 
         public bool completed = true;
 
-        public int gotCPs = 1000;
-
-        public int totalCPs = 1000;
-
         public List<EditorSplit> splits;
+
+        public int GotCPs => splits != null ? (completed ? splits.Count - 1 : splits.Count) : 0;
     }
 }

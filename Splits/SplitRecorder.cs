@@ -5,7 +5,7 @@ namespace EditorSpeedSplits.Splits
 {
     internal static class SplitRecorder
     {
-        public static readonly List<EditorSplit> Splits = new();
+        public static readonly List<EditorSplit> Splits = [];
 
         public static LevelSplits previousLevelSplits;
 
@@ -19,16 +19,14 @@ namespace EditorSpeedSplits.Splits
             Splits.Add(split);
         }
 
-        public static void SaveBestSplits(string levelName, float bestTime, List<EditorSplit> bestSplits, bool completed, int gotCPs, int totalCPs)
+        public static void SaveBestSplits(string levelName, float bestTime, List<EditorSplit> bestSplits, bool completed)
         {
-            LevelSplits levelSplits = new LevelSplits
+            LevelSplits levelSplits = new()
             {
                 levelName = levelName,
                 totalTime = bestTime,
                 completed = completed,
-                gotCPs = gotCPs,
-                totalCPs = totalCPs,
-                splits = new List<EditorSplit>(bestSplits)
+                splits = [.. bestSplits]
             };
 
             string identifier = levelName.Replace(Path.DirectorySeparatorChar, '_')

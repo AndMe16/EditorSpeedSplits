@@ -22,7 +22,7 @@ namespace EditorSpeedSplits.Patches
             var bestSplits = SplitRecorder.LoadBestSplits(Plugin.fullLevelName);
 
             if (bestSplits != null)
-                SplitRecorder.SaveBestSplits(newFullLevelName, bestSplits.totalTime, bestSplits.splits, bestSplits.completed, bestSplits.gotCPs, bestSplits.totalCPs);
+                SplitRecorder.SaveBestSplits(newFullLevelName, bestSplits.totalTime, bestSplits.splits, bestSplits.completed);
 
             Plugin.fullLevelName = newFullLevelName;
         }

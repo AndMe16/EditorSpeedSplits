@@ -125,9 +125,9 @@ namespace EditorSpeedSplits.Patches
 
                 // If we already have completed splits and the new time is not better
                 // We save if the # CPs is different
-                else if (SplitRecorder.previousLevelSplits != null && SplitRecorder.previousLevelSplits?.completed == true && SplitRecorder.previousLevelSplits?.totalTime <= result.time && SplitRecorder.previousLevelSplits?.gotCPs == result.racepoints)
+                else if (SplitRecorder.previousLevelSplits != null && SplitRecorder.previousLevelSplits?.completed == true && SplitRecorder.previousLevelSplits?.totalTime <= result.time && SplitRecorder.previousLevelSplits?.GotCPs == result.racepoints)
                 {
-                    Plugin.logger.LogInfo($"Finished level but did not beat previous best time {SplitRecorder.previousLevelSplits?.totalTime} vs {result.time} or got less CPs {SplitRecorder.previousLevelSplits?.gotCPs} vs {result.racepoints}, not saving splits.");
+                    Plugin.logger.LogInfo($"Finished level but did not beat previous best time {SplitRecorder.previousLevelSplits?.totalTime} vs {result.time} or got less CPs {SplitRecorder.previousLevelSplits?.GotCPs} vs {result.racepoints}, not saving splits.");
                     return;
                 }
 
@@ -152,8 +152,8 @@ namespace EditorSpeedSplits.Patches
                 }
 
                 else if (!(!SplitRecorder.previousLevelSplits.completed
-                    && (result.racepoints > SplitRecorder.previousLevelSplits.gotCPs 
-                        || (result.racepoints == SplitRecorder.previousLevelSplits.gotCPs 
+                    && (result.racepoints > SplitRecorder.previousLevelSplits.GotCPs 
+                        || (result.racepoints == SplitRecorder.previousLevelSplits.GotCPs 
                             && result.split_times[^1].time < SplitRecorder.previousLevelSplits.splits[^1].time
                             ))
                         )
@@ -167,14 +167,14 @@ namespace EditorSpeedSplits.Patches
             }
             if (shouldSaveSplits)
             {
-                SetNewPB(Plugin.fullLevelName, result, isFinish, __instance.master.racePoints);
+                SetNewPB(Plugin.fullLevelName, result, isFinish);
             }
 
         }
 
-        private static void SetNewPB(string levelName, WinCompare.Result result, bool completed, int totalCPs)
+        private static void SetNewPB(string levelName, WinCompare.Result result, bool completed)
         {
-            SplitRecorder.SaveBestSplits(levelName, completed?result.time:result.split_times[^1].time, SplitRecorder.Splits, completed, result.racepoints, totalCPs);
+            SplitRecorder.SaveBestSplits(levelName, completed?result.time:result.split_times[^1].time, SplitRecorder.Splits, completed);
         }
     }
 }
