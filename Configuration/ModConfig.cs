@@ -1,32 +1,32 @@
+using System;
 using BepInEx.Configuration;
 using UnityEngine;
 
-namespace EditorSpeedSplits.Configuration
+namespace EditorSpeedSplits.Configuration;
+
+public class ModConfig : MonoBehaviour
 {
-    public class ModConfig : MonoBehaviour
+    private static ConfigEntry<bool> _resetSplits;
+    public static ConfigEntry<KeyCode> ResetSplitsKey;
+
+    private void OnDestroy()
     {
-        public static ConfigEntry<bool> ResetSplits;
-        public static ConfigEntry<KeyCode> ResetSplitsKey;
+        _resetSplits.SettingChanged -= OnResetSplits;
+    }
 
-        public static void Initialize(ConfigFile config)
-        {
-            ResetSplits = config.Bind("1. Gameplay", "1.1 Reset Splits", true,
-                "[button] Reset the current level's splits");
+    public static void Initialize(ConfigFile config)
+    {
+        _resetSplits = config.Bind("1. Gameplay", "1.1 Reset Splits", true,
+            "[button] Reset the current level's splits");
 
-            ResetSplitsKey = config.Bind("2. Bindings", "2.1 Reset Splits Key", KeyCode.None,
-                "Key to reset the current level's splits");
+        ResetSplitsKey = config.Bind("2. Bindings", "2.1 Reset Splits Key", KeyCode.None,
+            "Key to reset the current level's splits");
 
-            ResetSplits.SettingChanged += OnResetSplits;
-        }
+        _resetSplits.SettingChanged += OnResetSplits;
+    }
 
-        private static void OnResetSplits(object sender, System.EventArgs e)
-        {
-            Plugin.ResetSplitsForCurrentLevel(true);
-        }
-
-        private void OnDestroy()
-        {
-            ResetSplits.SettingChanged -= OnResetSplits;
-        }
+    private static void OnResetSplits(object sender, EventArgs e)
+    {
+        Plugin.ResetSplitsForCurrentLevel(true);
     }
 }

@@ -1,16 +1,16 @@
 using HarmonyLib;
-using ZeepSDK.LevelEditor;
+using JetBrains.Annotations;
 
-namespace EditorSpeedSplits.Patches
+namespace EditorSpeedSplits.Patches;
+
+[HarmonyPatch(typeof(LEV_ReturnToMainMenu), "ReturnToMainMenu")]
+internal class LevReturnToMainMenuPatch
 {
-    [HarmonyPatch(typeof(LEV_ReturnToMainMenu), "ReturnToMainMenu")]
-    internal class LevReturnToMainMenuPatch
+    [HarmonyPostfix]
+    [UsedImplicitly]
+    private static void Postfix()
     {
-        [HarmonyPostfix]
-        private static void Postfix()
-        {
-            Plugin.fullLevelName = "";
-            Plugin.logger.LogInfo("Cleared fullLevelName on return to main menu");
-        }
+        Plugin.FullLevelName = "";
+        Plugin.logger.LogInfo("Cleared fullLevelName on return to main menu");
     }
 }

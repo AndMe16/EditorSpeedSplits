@@ -1,4 +1,5 @@
-﻿using BepInEx;
+﻿using System.Collections.Generic;
+using BepInEx;
 using BepInEx.Logging;
 using EditorSpeedSplits.Configuration;
 using EditorSpeedSplits.GUIManager;
@@ -6,7 +7,6 @@ using EditorSpeedSplits.Patches;
 using EditorSpeedSplits.Splits;
 using EditorSpeedSplits.UI;
 using HarmonyLib;
-using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -16,235 +16,232 @@ using ZeepSDK.Racing;
 using ZeepSDK.Storage;
 using ZeepSDK.UI;
 
-namespace EditorSpeedSplits
+namespace EditorSpeedSplits;
+
+[BepInPlugin("com.andme.editorspeedsplits", "EditorSpeedSplits", MyPluginInfo.PLUGIN_VERSION)]
+[BepInDependency("ZeepSDK")]
+public class Plugin : BaseUnityPlugin
 {
-    [BepInPlugin("com.andme.editorspeedsplits", "EditorSpeedSplits", MyPluginInfo.PLUGIN_VERSION)]
-    [BepInDependency("ZeepSDK")]
-    public class Plugin : BaseUnityPlugin
+    private const string DefaultName = "LevelEditorSplitsModDefaultName";
+
+    // ReSharper disable once InconsistentNaming
+    internal static ManualLogSource logger;
+
+    internal static LEV_LevelEditorCentral Central;
+
+    internal static string FullLevelName = "";
+    private Harmony _harmony;
+
+    private EditorSplitsToolbarDrawer _toolbarDrawer;
+
+    public EditorSplitsGUIDrawer GUIDrawer;
+
+    internal IModStorage PersonalBestSplitsStorage;
+
+    public static Plugin Instance { get; private set; }
+
+    private void Awake()
     {
-        internal static ManualLogSource logger;
-        private Harmony harmony;
+        Instance = this;
+        logger = Logger;
 
-        public static Plugin Instance { get; private set; }
+        _harmony = new Harmony("com.andme.editorspeedsplits");
+        _harmony.PatchAll();
 
-        internal static LEV_LevelEditorCentral central;
+        ModConfig.Initialize(Config);
 
-        internal static string fullLevelName = "";
+        logger.LogInfo("Plugin com.andme.editorspeedsplits is loaded!");
 
-        internal static readonly string defaultName = "LevelEditorSplitsModDefaultName";
+        LevelEditorApi.EnteredLevelEditor += OnEnteredLevelEditor;
+        LevelEditorApi.ExitedLevelEditor += OnExitedLevelEditor;
+        RacingApi.PlayerSpawned += OnPlayerSpawned;
 
-        private EditorSplitsToolbarDrawer _toolbarDrawer;
+        PersonalBestSplitsStorage = StorageApi.CreateModStorage(this);
 
-        public EditorSplitsGUIDrawer _guiDrawer;
+        _toolbarDrawer = new EditorSplitsToolbarDrawer();
+        UIApi.AddToolbarDrawer(_toolbarDrawer);
 
-        internal IModStorage personalBestSplitsStorage;
+        GUIDrawer = new EditorSplitsGUIDrawer();
+        UIApi.AddZeepGUIDrawer(GUIDrawer);
 
-        private void Awake()
+        GUIDrawer.LoadWindowsRects();
+    }
+
+    private void Update()
+    {
+        if (!Input.GetKeyDown(ModConfig.ResetSplitsKey.Value))
+            return;
+
+        // Input globally locked / paused
+        if (Time.timeScale == 0f)
+            return;
+
+        // Player typing in an input field
+        // ReSharper disable once Unity.PerformanceCriticalCodeInvocation
+        if (IsTypingInInputField())
+            return;
+
+        // ReSharper disable once Unity.PerformanceCriticalCodeInvocation
+        ResetSplitsForCurrentLevel(true);
+    }
+
+    private void OnDestroy()
+    {
+        Instance.GUIDrawer.SaveWindowsRects();
+
+        UIApi.RemoveToolbarDrawer(_toolbarDrawer);
+        UIApi.RemoveZeepGUIDrawer(GUIDrawer);
+        LevelEditorApi.EnteredLevelEditor -= OnEnteredLevelEditor;
+        LevelEditorApi.ExitedLevelEditor -= OnExitedLevelEditor;
+        RacingApi.PlayerSpawned -= OnPlayerSpawned;
+        _harmony?.UnpatchSelf();
+        _harmony = null;
+    }
+
+    private static void OnEnteredLevelEditor()
+    {
+        Central = FindObjectOfType<LEV_LevelEditorCentral>();
+        if (Central == null)
         {
-            Instance = this;
-            logger = Logger;
-
-            harmony = new Harmony("com.andme.editorspeedsplits");
-            harmony.PatchAll();
-
-            ModConfig.Initialize(Config);
-
-            logger.LogInfo("Plugin com.andme.editorspeedsplits is loaded!");
-
-            LevelEditorApi.EnteredLevelEditor += OnEnteredLevelEditor;
-            LevelEditorApi.ExitedLevelEditor += OnExitedLevelEditor;
-            RacingApi.PlayerSpawned += OnPlayerSpawned;
-
-            personalBestSplitsStorage = StorageApi.CreateModStorage(this);
-
-            _toolbarDrawer = new EditorSplitsToolbarDrawer();
-            UIApi.AddToolbarDrawer(_toolbarDrawer);
-
-            _guiDrawer = new EditorSplitsGUIDrawer();
-            UIApi.AddZeepGUIDrawer(_guiDrawer);
-
-            _guiDrawer.LoadWindowsRects();
-
-
+            logger.LogWarning("Level Editor Central not found.");
+            return;
         }
 
-        private void Update()
+        if (string.IsNullOrEmpty(FullLevelName))
         {
-            if (!Input.GetKeyDown(ModConfig.ResetSplitsKey.Value))
-                return;
-
-            // Input globally locked / paused
-            if (Time.timeScale == 0f)
-                return;
-
-            // Player typing in an input field
-            if (IsTypingInInputField())
-                return;
-
-            ResetSplitsForCurrentLevel(true);
+            FullLevelName = DefaultName;
+            SplitRecorder.DeleteBestSplits(FullLevelName);
         }
 
-        private void OnEnteredLevelEditor()
-        {
-            central = FindObjectOfType<LEV_LevelEditorCentral>();
-            if (central == null)
-            {
-                logger.LogWarning("Level Editor Central not found.");
+        SyncEditorUIWithSplitsAvailability();
+    }
+
+    private static void OnPlayerSpawned()
+    {
+        if (!LevelEditorApi.IsTestingLevel)
+            return;
+
+        SplitRecorder.Clear();
+        ReadyToResetHeyYouHitATriggerPatch.Triggers.Clear();
+    }
+
+    private void OnExitedLevelEditor()
+    {
+        Central = null;
+        DestroyEditorUI();
+    }
+
+
+    internal static void ResetSplitsForCurrentLevel(bool showMessage)
+    {
+        if (!LevelEditorApi.IsTestingLevel && !LevelEditorApi.IsInLevelEditor)
+            return;
+
+        if (LevelEditorApi.IsInLevelEditor && Central)
+            if (Central.input.inputLocked)
                 return;
-            }
 
-            if (string.IsNullOrEmpty(fullLevelName))
-            {
-                fullLevelName = defaultName;
-                SplitRecorder.DeleteBestSplits(fullLevelName);
+        var currentFullLevelName = FullLevelName;
 
-            }
-
-            SyncEditorUIWithSplitsAvailability();
+        if (string.IsNullOrEmpty(currentFullLevelName))
+        {
+            logger.LogWarning("No level loaded in the editor to reset splits for.");
+            MessengerApi.LogWarning("[EditorSpeedSplits] No level loaded to reset splits for");
+            return;
         }
 
-        private void OnPlayerSpawned()
+        // ReSharper disable once Unity.PerformanceCriticalCodeInvocation
+        var gameMaster = FindObjectOfType<GameMaster>();
+
+        gameMaster?.SetupPersonalBestAndMedals(0f, []);
+
+        SplitRecorder.DeleteBestSplits(FullLevelName);
+
+        Instance.GUIDrawer.RefreshSplits();
+
+        logger.LogInfo($"Splits reset for level {FullLevelName}");
+        if (showMessage)
+            MessengerApi.Log("[EditorSpeedSplits] Splits Reset");
+    }
+
+    private static bool IsTypingInInputField()
+    {
+        if (!EventSystem.current)
+            return false;
+
+        var selected = EventSystem.current.currentSelectedGameObject;
+        return !selected
+            ? false
+            :
+            // ReSharper disable once Unity.PerformanceCriticalCodeInvocation
+            selected.GetComponent<TMP_InputField>();
+    }
+
+    internal static void SyncEditorUIWithSplitsAvailability()
+    {
+        if (string.IsNullOrEmpty(FullLevelName))
         {
-            if (!LevelEditorApi.IsTestingLevel)
-                return;
-
-            SplitRecorder.Clear();
-            ReadyToResetHeyYouHitATriggerPatch.triggers.Clear();
-        }
-
-        private void OnExitedLevelEditor()
-        {
-            central = null;
-            DestroyEditorUI();
-        }
-
-
-        internal static void ResetSplitsForCurrentLevel(bool ShowMessage)
-        {
-
-            if (!LevelEditorApi.IsTestingLevel && !LevelEditorApi.IsInLevelEditor)
-                return;
-
-            if (LevelEditorApi.IsInLevelEditor && central != null)
-            {
-                if (central.input.inputLocked)
-                    return;
-            }
-
-            string currentFullLevelName = fullLevelName;
-
-            if (string.IsNullOrEmpty(currentFullLevelName))
-            {
-                logger.LogWarning("No level loaded in the editor to reset splits for.");
-                MessengerApi.LogWarning("[EditorSpeedSplits] No level loaded to reset splits for");
-                return;
-            }
-
-            GameMaster gameMaster = FindObjectOfType<GameMaster>();
-
-            gameMaster?.SetupPersonalBestAndMedals(0f, []);
-
-            SplitRecorder.DeleteBestSplits(fullLevelName);
-
-            Instance._guiDrawer.RefreshSplits();
-
-            logger.LogInfo($"Splits reset for level {fullLevelName}");
-            if (ShowMessage)
-                MessengerApi.Log("[EditorSpeedSplits] Splits Reset");
-        }
-
-        private bool IsTypingInInputField()
-        {
-            if (EventSystem.current == null)
-                return false;
-
-            var selected = EventSystem.current.currentSelectedGameObject;
-            if (selected == null)
-                return false;
-
-            return selected.GetComponent<TMP_InputField>() != null;
-        }
-
-        internal static void SyncEditorUIWithSplitsAvailability()
-        {
-            if (string.IsNullOrEmpty(fullLevelName))
-            {
-                logger.LogWarning("No level loaded in the editor to sync UI for.");
-                Instance?.DestroyEditorUI();
-                return;
-            }
-
-            if (SplitRecorder.HasSplits(fullLevelName))
-            {
-                logger.LogInfo("Splits found for current level, showing editor UI.");
-                Instance?.SetupEditorUI();
-                return;
-            }
-            logger.LogInfo("No splits found for current level, hiding editor UI.");
+            logger.LogWarning("No level loaded in the editor to sync UI for.");
             Instance?.DestroyEditorUI();
+            return;
         }
 
-
-        private void SetupEditorUI()
+        if (SplitRecorder.HasSplits(FullLevelName))
         {
-            _guiDrawer._SplitsButtonOpen = true;
+            logger.LogInfo("Splits found for current level, showing editor UI.");
+            Instance?.SetupEditorUI();
+            return;
         }
 
-        private void DestroyEditorUI()
+        logger.LogInfo("No splits found for current level, hiding editor UI.");
+        Instance?.DestroyEditorUI();
+    }
+
+
+    private void SetupEditorUI()
+    {
+        GUIDrawer.SplitsButtonOpen = true;
+    }
+
+    private void DestroyEditorUI()
+    {
+        GUIDrawer.SplitsButtonOpen = false;
+        GUIDrawer.SplitsListOpen = false;
+        GUIDrawer.IsDrawingSplitsButtons = false;
+    }
+
+
+    internal static ReplayManager.ReplayInfo GetReplaySplits()
+    {
+        ReplayManager.ReplayInfo replay = null;
+
+        if (string.IsNullOrEmpty(FullLevelName)) return replay;
+        if (SplitRecorder.HasSplits(FullLevelName))
         {
-            _guiDrawer._SplitsButtonOpen = false;
-            _guiDrawer._SplitsListOpen = false;
-            _guiDrawer.isDrawingSplitsButtons = false;
-            _guiDrawer.isDrawingSplitsList = false;
-        }
-
-
-        internal static ReplayManager.ReplayInfo GetReplaySplits()
-        {
-            ReplayManager.ReplayInfo replay = null;
-
-            if (!string.IsNullOrEmpty(fullLevelName))
+            var bestSplits = SplitRecorder.LoadBestSplits(FullLevelName);
+            List<float> splitTimes = [];
+            List<float> splitVelocities = [];
+            foreach (var t in bestSplits.splits)
             {
-                if (SplitRecorder.HasSplits(fullLevelName))
-                {
-                    var bestSplits = SplitRecorder.LoadBestSplits(fullLevelName);
-                    List<float> splitTimes = [];
-                    List<float> splitVelocities = [];
-                    for (int i = 0; i < bestSplits.splits.Count; i++)
-                    {
-                        splitTimes.Add(bestSplits.splits[i].time);
-                        splitVelocities.Add(bestSplits.splits[i].velocity);
-                    }
-                    replay = new ReplayManager.ReplayInfo
-                    {
-                        LevelUID = bestSplits.levelName,
-                        Time = bestSplits.totalTime,
-                        Splits = splitTimes,
-                        velocities = splitVelocities
-                    };
-
-                    SplitRecorder.previousLevelSplits = bestSplits;
-                }
-                else
-                {
-                    SplitRecorder.previousLevelSplits = null;
-                }
+                splitTimes.Add(t.time);
+                splitVelocities.Add(t.velocity);
             }
 
-            return replay;
-        }
+            replay = new ReplayManager.ReplayInfo
+            {
+                LevelUID = bestSplits.levelName,
+                Time = bestSplits.totalTime,
+                Splits = splitTimes,
+                velocities = splitVelocities
+            };
 
-        private void OnDestroy()
+            SplitRecorder.PreviousLevelSplits = bestSplits;
+        }
+        else
         {
-            Instance._guiDrawer.SaveWindowsRects();
-
-            UIApi.RemoveToolbarDrawer(_toolbarDrawer);
-            UIApi.RemoveZeepGUIDrawer(_guiDrawer);
-            LevelEditorApi.EnteredLevelEditor -= OnEnteredLevelEditor;
-            LevelEditorApi.ExitedLevelEditor -= OnExitedLevelEditor;
-            RacingApi.PlayerSpawned -= OnPlayerSpawned;
-            harmony?.UnpatchSelf();
-            harmony = null;
+            SplitRecorder.PreviousLevelSplits = null;
         }
+
+        return replay;
     }
 }

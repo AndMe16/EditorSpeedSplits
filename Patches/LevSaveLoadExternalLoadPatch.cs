@@ -1,30 +1,29 @@
-using EditorSpeedSplits.Splits;
+using System.IO;
 using EditorSpeedSplits.Utilities;
 using HarmonyLib;
-using System.Collections.Generic;
-using System.IO;
+using JetBrains.Annotations;
 using ZeepSDK.LevelEditor;
 
-namespace EditorSpeedSplits.Patches
+namespace EditorSpeedSplits.Patches;
+
+[HarmonyPatch(typeof(LEV_SaveLoad), "ExternalLoad")]
+internal class LevSaveLoadExternalLoadPatch
 {
-    [HarmonyPatch(typeof(LEV_SaveLoad), "ExternalLoad")]
-    internal class LevSaveLoadExternalLoadPatch
+    [HarmonyPostfix]
+    [UsedImplicitly]
+    private static void Postfix(string filePath, bool isTestLevel)
     {
-        [HarmonyPostfix]
-        private static void Postfix(string filePath, bool isTestLevel)
-        {
-            if (!LevelEditorApi.IsInLevelEditor)
-                return;
+        if (!LevelEditorApi.IsInLevelEditor)
+            return;
 
-            if (isTestLevel)
-                return;
+        if (isTestLevel)
+            return;
 
-            Plugin.fullLevelName = LevelIdentifier.MakeLevelIdentifier(
-                Path.ChangeExtension(filePath, null));
+        Plugin.FullLevelName = LevelIdentifier.MakeLevelIdentifier(
+            Path.ChangeExtension(filePath, null));
 
-            Plugin.SyncEditorUIWithSplitsAvailability();
+        Plugin.SyncEditorUIWithSplitsAvailability();
 
-            Plugin.Instance._guiDrawer?.RefreshSplits();
-        }
+        Plugin.Instance.GUIDrawer?.RefreshSplits();
     }
 }

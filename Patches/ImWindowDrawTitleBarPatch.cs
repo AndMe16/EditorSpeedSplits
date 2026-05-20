@@ -1,28 +1,24 @@
-﻿using EditorSpeedSplits.GUIManager;
+﻿using System;
+using EditorSpeedSplits.GUIManager;
 using HarmonyLib;
 using Imui.Controls;
 using Imui.Core;
-using System;
-using UnityEngine;
+using JetBrains.Annotations;
 
-namespace EditorSpeedSplits.Patches
+namespace EditorSpeedSplits.Patches;
+
+[HarmonyPatch(typeof(ImWindow), nameof(ImWindow.DrawTitleBar))]
+internal class ImWindowDrawTitleBarPatch
 {
-    [HarmonyPatch(typeof(ImWindow), nameof(ImWindow.DrawTitleBar))]
-    internal class ImWindowDrawTitleBarPatch
+    [HarmonyPrefix]
+    [UsedImplicitly]
+    private static bool Prefix(ImGui gui, ImRect rect, ReadOnlySpan<char> text)
     {
-        [HarmonyPrefix]
-        static bool Prefix(ImGui gui, ImRect rect, ReadOnlySpan<char> text)
-        {
-            if ((text == "com.andme.editorspeedsplits_Splits") && Plugin.Instance._guiDrawer.isDrawingSplitsButtons)
-            {
-                EditorSplitsGUIDrawer.MyDrawTitleBar(gui, rect, text);
+        if (text is not "com.andme.editorspeedsplits_Splits" || !Plugin.Instance.GUIDrawer.IsDrawingSplitsButtons)
+            return true; // Run the original DrawTitleBar for other windows
+        EditorSplitsGUIDrawer.MyDrawTitleBar(gui, rect);
 
-                // Skip original DrawTitleBar
-                return false;
-                
-            }
-            return true; // Run original DrawTitleBar for other windows
-
-        }
+        // Skip the original DrawTitleBar
+        return false;
     }
 }

@@ -1,77 +1,74 @@
 using System.Collections.Generic;
 using System.IO;
 
-namespace EditorSpeedSplits.Splits
+namespace EditorSpeedSplits.Splits;
+
+internal static class SplitRecorder
 {
-    internal static class SplitRecorder
+    public static readonly List<EditorSplit> Splits = [];
+
+    public static LevelSplits PreviousLevelSplits;
+
+    public static void Clear()
     {
-        public static readonly List<EditorSplit> Splits = [];
+        Splits.Clear();
+    }
 
-        public static LevelSplits previousLevelSplits;
+    public static void Add(EditorSplit split)
+    {
+        Splits.Add(split);
+    }
 
-        public static void Clear()
+    public static void SaveBestSplits(string levelName, float bestTime, List<EditorSplit> bestSplits, bool completed)
+    {
+        LevelSplits levelSplits = new()
         {
-            Splits.Clear();
-        }
+            levelName = levelName,
+            totalTime = bestTime,
+            completed = completed,
+            splits = [.. bestSplits]
+        };
 
-        public static void Add(EditorSplit split)
-        {
-            Splits.Add(split);
-        }
+        var identifier = levelName.Replace(Path.DirectorySeparatorChar, '_')
+            .Replace(Path.AltDirectorySeparatorChar, '_');
 
-        public static void SaveBestSplits(string levelName, float bestTime, List<EditorSplit> bestSplits, bool completed)
-        {
-            LevelSplits levelSplits = new()
-            {
-                levelName = levelName,
-                totalTime = bestTime,
-                completed = completed,
-                splits = [.. bestSplits]
-            };
+        Plugin.Instance.PersonalBestSplitsStorage.SaveToJson(identifier, levelSplits);
 
-            string identifier = levelName.Replace(Path.DirectorySeparatorChar, '_')
-                .Replace(Path.AltDirectorySeparatorChar, '_');
+        Plugin.logger.LogInfo($"Saved best splits for level {levelName} to storage.");
+    }
 
-            Plugin.Instance.personalBestSplitsStorage.SaveToJson(identifier, levelSplits);
+    public static LevelSplits LoadBestSplits(string levelName)
+    {
+        var identifier = levelName.Replace(Path.DirectorySeparatorChar, '_')
+            .Replace(Path.AltDirectorySeparatorChar, '_');
 
-            Plugin.logger.LogInfo($"Saved best splits for level {levelName} to storage.");
-        }
+        if (!Plugin.Instance.PersonalBestSplitsStorage.JsonFileExists(identifier))
+            return null;
 
-        public static LevelSplits LoadBestSplits(string levelName)
-        {
-            string identifier = levelName.Replace(Path.DirectorySeparatorChar, '_')
-                .Replace(Path.AltDirectorySeparatorChar, '_');
+        Plugin.logger.LogInfo($"Loading best splits for level {levelName} from storage.");
 
-            if (!Plugin.Instance.personalBestSplitsStorage.JsonFileExists(identifier))
-                return null;
+        return Plugin.Instance.PersonalBestSplitsStorage.LoadFromJson<LevelSplits>(identifier);
+    }
 
-            Plugin.logger.LogInfo($"Loading best splits for level {levelName} from storage.");
+    public static void DeleteBestSplits(string levelName)
+    {
+        var identifier = levelName.Replace(Path.DirectorySeparatorChar, '_')
+            .Replace(Path.AltDirectorySeparatorChar, '_');
+        if (!Plugin.Instance.PersonalBestSplitsStorage.JsonFileExists(identifier)) return;
+        Plugin.Instance.PersonalBestSplitsStorage.DeleteJsonFile(identifier);
+        Plugin.logger.LogInfo($"Deleted best splits for level {levelName} from storage.");
+    }
 
-            return Plugin.Instance.personalBestSplitsStorage.LoadFromJson<LevelSplits>(identifier);
-        }
+    public static bool HasSplits(string levelName)
+    {
+        var identifier = levelName.Replace(Path.DirectorySeparatorChar, '_')
+            .Replace(Path.AltDirectorySeparatorChar, '_');
 
-        public static void DeleteBestSplits(string levelName)
-        {
-            string identifier = levelName.Replace(Path.DirectorySeparatorChar, '_')
-                .Replace(Path.AltDirectorySeparatorChar, '_');
-            if (Plugin.Instance.personalBestSplitsStorage.JsonFileExists(identifier))
-            {
-                Plugin.Instance.personalBestSplitsStorage.DeleteJsonFile(identifier);
-                Plugin.logger.LogInfo($"Deleted best splits for level {levelName} from storage.");
-            }
-        }
+        if (!Plugin.Instance.PersonalBestSplitsStorage.JsonFileExists(identifier))
+            return false;
 
-        public static bool HasSplits(string levelName)
-        {
-            string identifier = levelName.Replace(Path.DirectorySeparatorChar, '_')
-                .Replace(Path.AltDirectorySeparatorChar, '_');
+        Plugin.logger.LogInfo($"Best splits for level {levelName} exist in storage.");
 
-            if (!Plugin.Instance.personalBestSplitsStorage.JsonFileExists(identifier))
-                return false;
-
-            Plugin.logger.LogInfo($"Best splits for level {levelName} exist in storage.");
-
-            return true;
-        }
+        return true;
     }
 }
