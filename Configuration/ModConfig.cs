@@ -8,6 +8,7 @@ public class ModConfig : MonoBehaviour
 {
     private static ConfigEntry<bool> _resetSplits;
     public static ConfigEntry<KeyCode> ResetSplitsKey;
+    public static ConfigEntry<bool> CpPBSpeed;
 
     private void OnDestroy()
     {
@@ -21,6 +22,9 @@ public class ModConfig : MonoBehaviour
 
         ResetSplitsKey = config.Bind("2. Bindings", "2.1 Reset Splits Key", KeyCode.None,
             "Key to reset the current level's splits");
+
+        CpPBSpeed = config.Bind("1. Gameplay", "1.2 Speed for CP PBs", false,
+            "Use speed instead of time for checkpoint personal bests");
 
         _resetSplits.SettingChanged += OnResetSplits;
     }

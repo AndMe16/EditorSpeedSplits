@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using EditorSpeedSplits.Configuration;
 using EditorSpeedSplits.Splits;
 using HarmonyLib;
 using JetBrains.Annotations;
@@ -153,9 +154,11 @@ internal class ReadyToResetHeyYouHitATriggerPatch
 
             else if (!(!SplitRecorder.PreviousLevelSplits.completed
                        && (result.racepoints > SplitRecorder.PreviousLevelSplits.GotCPs
-                           || (result.racepoints == SplitRecorder.PreviousLevelSplits.GotCPs
-                               && result.split_times[^1].time < SplitRecorder.PreviousLevelSplits.splits[^1].time
-                           ))
+                           || (result.racepoints == SplitRecorder.PreviousLevelSplits.GotCPs && !ModConfig.CpPBSpeed.Value
+                               && result.split_times[^1].time < SplitRecorder.PreviousLevelSplits.splits[^1].time)
+                           || (result.racepoints == SplitRecorder.PreviousLevelSplits.GotCPs && ModConfig.CpPBSpeed.Value
+                               && result.split_times[^1].velocity > SplitRecorder.PreviousLevelSplits.splits[^1].velocity)
+                           )
                      )
                     )
             {
