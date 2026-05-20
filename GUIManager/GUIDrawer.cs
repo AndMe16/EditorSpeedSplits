@@ -158,7 +158,6 @@ public class EditorSplitsGUIDrawer : IZeepGUIDrawer
                 var textSize = gui.MeasureTextSize($"{"",-SplitWidth}" + $"{"",-TimeWidth}" + $"{"",VelocityWidth}");
                 var rectSize = textSize;
                 // Probably missing some spacing values here and there, but it looks good enough
-                // TODO: Check the timing, I saw some bugs
                 rectSize.x += gui.Style.Layout.InnerSpacing * 2f;
                 rectSize.x += gui.Style.Scroll.Size + gui.Style.Layout.Spacing * 4f;
                 rectSize.x *=
