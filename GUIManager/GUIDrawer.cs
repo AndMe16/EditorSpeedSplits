@@ -328,7 +328,8 @@ public class EditorSplitsGUIDrawer : IZeepGUIDrawer
 
     public void SaveWindowsRects()
     {
-        Plugin.Instance.PersonalBestSplitsStorage.SaveToJson("SplitsWindowRects", _windowRects);
+        if (_windowRects != null && (_windowRects.ButtonsWindow.Size != Vector2.zero || _windowRects.SplitsWindow.Size != Vector2.zero)) 
+            Plugin.Instance.PersonalBestSplitsStorage.SaveToJson("SplitsWindowRects", _windowRects);
     }
 
     public void LoadWindowsRects()
@@ -336,7 +337,9 @@ public class EditorSplitsGUIDrawer : IZeepGUIDrawer
         if (!Plugin.Instance.PersonalBestSplitsStorage.JsonFileExists("SplitsWindowRects")) return;
         _loadedWindowRects =
             Plugin.Instance.PersonalBestSplitsStorage.LoadFromJson<WindowRects>("SplitsWindowRects");
-        _loadRectsButtons = true;
-        _loadRectsList = true;
+        if (_loadedWindowRects.ButtonsWindow.Size != Vector2.zero)
+            _loadRectsButtons = true;
+        if (_loadedWindowRects.SplitsWindow.Size != Vector2.zero)
+            _loadRectsList = true;
     }
 }
