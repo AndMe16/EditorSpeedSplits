@@ -31,6 +31,9 @@ internal class ReadyToResetHeyYouHitATriggerPatch
         ref Vector3 pointOnPlane
     )
     {
+        if (!Plugin.Instance.ShouldRecordSplits)
+            return;
+
         if (!__instance.GlobalLevel.IsTestLevel)
             return;
 

@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using BepInEx;
 using BepInEx.Logging;
 using EditorSpeedSplits.Configuration;
@@ -33,6 +34,8 @@ public class Plugin : BaseUnityPlugin
     private Harmony _harmony;
 
     private EditorSplitsToolbarDrawer _toolbarDrawer;
+
+    public bool ShouldRecordSplits = false;
 
     public EditorSplitsGUIDrawer GUIDrawer;
 
@@ -123,6 +126,70 @@ public class Plugin : BaseUnityPlugin
 
         SplitRecorder.Clear();
         ReadyToResetHeyYouHitATriggerPatch.Triggers.Clear();
+
+        if (IsStartPosition())
+        {
+            Instance.ShouldRecordSplits = true;
+        }
+        else
+        {
+            Instance.ShouldRecordSplits = false;
+            MessengerApi.Log("[EditorSpeedSplits] Player did not spawn at start position, skipping splits recording");
+            
+        }
+
+    }
+
+    private static bool IsStartPosition()
+    {
+        // ReSharper disable once Unity.PerformanceCriticalCodeInvocation
+        var gameMaster = FindObjectOfType<GameMaster>();
+
+        if (gameMaster == null)
+        {
+            MessengerApi.LogWarning("[EditorSpeedSplits] GameMaster not found, cannot determine if player spawned at start position.");
+            return false;
+        }
+
+        if (gameMaster.spawns == null)
+        {
+            MessengerApi.LogWarning("[EditorSpeedSplits] No spawn points found, cannot determine if player spawned at start position.");
+            return false;
+        }
+
+        var spawn1PTransform = gameMaster.spawns.spawn1P?.transform;
+
+        if (spawn1PTransform == null)
+        {
+            MessengerApi.LogWarning("[EditorSpeedSplits] Spawn points is null, cannot determine if player spawned at start position.");
+            return false;
+        }
+
+        SetupCar setupCar = FindObjectOfType<SetupCar>();
+
+        if (setupCar == null)
+        {
+            MessengerApi.LogWarning("[EditorSpeedSplits] Failed to instantiate SetupCar, cannot determine if player spawned at start position.");
+            return false;
+        }
+
+        var setupCarPosition = setupCar.cc?.GetRB()?.position;
+
+        if (setupCarPosition == null)
+        {
+            MessengerApi.LogWarning("[EditorSpeedSplits] Failed to get SetupCar position, cannot determine if player spawned at start position.");
+            return false;
+        }
+
+        // add some tolerance for floating point imprecision, player might not spawn at exact position but close enough should count as start position
+        if (Vector3.Distance(setupCarPosition.Value, spawn1PTransform.position) > 0.01f) 
+        {
+            logger.LogInfo($"Player spawned at position {setupCarPosition}, expected {spawn1PTransform.position}");
+            return false;
+        }
+        return true;
+
+
     }
 
     private void OnExitedLevelEditor()
